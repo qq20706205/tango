@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPS 需求管理平台</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 22px; color: rgba(0,0,0,.85); background: #f0f2f5; }
+
+/* NAV */
+.nav { background: #001529; height: 48px; display: flex; align-items: center; padding: 0 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.nav-logo { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: .5px; white-space: nowrap; margin-right: 40px; }
+.nav-logo span { color: #1890ff; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link { color: rgba(255,255,255,.65); padding: 0 16px; height: 48px; display: flex; align-items: center; cursor: pointer; transition: all .2s; font-size: 14px; text-decoration: none; border-bottom: 2px solid transparent; }
+.nav-link:hover { color: #fff; }
+.nav-link.active { color: #fff; border-bottom-color: #1890ff; }
+
+/* MAIN */
+.main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+.page-title { font-size: 20px; font-weight: 600; color: rgba(0,0,0,.85); margin-bottom: 16px; }
+
+/* STATS */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: #fff; border-radius: 4px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,21,41,.08); display: flex; align-items: center; gap: 16px; }
+.stat-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-icon.blue { background: #e6f7ff; }
+.stat-icon.orange { background: #fff7e6; }
+.stat-icon.green { background: #f6ffed; }
+.stat-label { font-size: 13px; color: rgba(0,0,0,.45); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 600; color: rgba(0,0,0,.85); }
+
+/* TOOLBAR */
+.toolbar { background: #fff; border-radius: 4px; padding: 16px; box-shadow: 0 1px 4px rgba(0,21,41,.08); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.toolbar-left { display: flex; align-items: center; gap: 12px; }
+.toolbar-center { display: flex; align-items: center; gap: 12px; flex: 1; flex-wrap: wrap; }
+.toolbar-right { display: flex; align-items: center; gap: 12px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 15px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; font-size: 14px; line-height: 22px; transition: all .2s; white-space: nowrap; outline: none; font-family: inherit; }
+.btn-primary { background: #1890ff; border-color: #1890ff; color: #fff; }
+.btn-primary:hover { background: #40a9ff; border-color: #40a9ff; }
+.btn-default { background: #fff; border-color: #d9d9d9; color: rgba(0,0,0,.65); }
+.btn-default:hover { border-color: #40a9ff; color: #40a9ff; }
+.btn-link { background: transparent; border-color: transparent; color: #1890ff; padding: 0 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.btn-link:hover { color: #40a9ff; }
+.btn-sm { padding: 2px 10px; font-size: 13px; }
+.btn-config { background: #fff; border-color: #d9d9d9; color: rgba(0,0,0,.65); }
+.btn-config:hover { border-color: #1890ff; color: #1890ff; }
+.btn-danger-link { background: transparent; border-color: transparent; color: #ff4d4f; padding: 0 4px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.btn-danger-link:hover { color: #ff7875; }
+
+.search-input { height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 11px 4px 32px; font-size: 14px; outline: none; width: 220px; background: #fff; transition: all .2s; font-family: inherit; }
+.search-input:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.search-wrap { position: relative; display: inline-flex; align-items: center; }
+.search-wrap svg { position: absolute; left: 10px; pointer-events: none; color: #bfbfbf; }
+
+.filter-select { height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 28px 4px 11px; font-size: 14px; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 120px; background: #fff; font-family: inherit; }
+.filter-select:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.select-wrap { position: relative; display: inline-flex; align-items: center; }
+.select-wrap svg { position: absolute; right: 8px; pointer-events: none; color: #bfbfbf; }
+
+/* TABLE */
+.table-wrap { background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,21,41,.08); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+thead th { background: #fafafa; padding: 12px 16px; text-align: left; font-weight: 600; color: rgba(0,0,0,.85); border-bottom: 1px solid #f0f0f0; white-space: nowrap; font-size: 13px; }
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #e6f7ff !important; }
+tbody tr:nth-child(even) { background: #fafafa; }
+tbody td { padding: 12px 16px; color: rgba(0,0,0,.65); vertical-align: middle; }
+.td-id { font-family: monospace; font-size: 12px; color: rgba(0,0,0,.45); white-space: nowrap; }
+.td-title { max-width: 200px; font-weight: 500; color: rgba(0,0,0,.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-ops { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.badge-red { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+.badge-orange { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.badge-blue { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+.badge-green { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.badge-gray { background: #fafafa; color: rgba(0,0,0,.45); border: 1px solid #d9d9d9; }
+.badge-cyan { background: #e6fffb; color: #13c2c2; border: 1px solid #87e8de; }
+
+.score-link { color: #1890ff; cursor: pointer; border: none; background: none; font-size: 14px; padding: 0; line-height: inherit; font-family: inherit; }
+.score-link:hover { color: #40a9ff; text-decoration: underline; }
+.iter-link { color: #1890ff; cursor: pointer; border: none; background: none; font-size: 13px; padding: 0; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; font-family: inherit; }
+.iter-link:hover { color: #40a9ff; text-decoration: underline; }
+.iter-none { color: rgba(0,0,0,.35); font-size: 13px; cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 48px 0; color: rgba(0,0,0,.25); }
+
+/* PAGINATION */
+.pagination-bar { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 13px; color: rgba(0,0,0,.65); flex-wrap: wrap; }
+.page-btn { height: 28px; min-width: 28px; border: 1px solid #d9d9d9; border-radius: 4px; background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; padding: 0 6px; transition: all .2s; font-family: inherit; }
+.page-btn:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; }
+.page-btn.active { border-color: #1890ff; color: #1890ff; background: #e6f7ff; }
+.page-btn:disabled { cursor: not-allowed; opacity: .5; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 4px; box-shadow: 0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.08); width: 100%; margin: auto; display: flex; flex-direction: column; max-height: calc(100vh - 48px); overflow: hidden; }
+.modal-sm { max-width: 480px; }
+.modal-md { max-width: 640px; }
+.modal-lg { max-width: 860px; }
+.modal-xl { max-width: 1100px; }
+.modal-header { padding: 16px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.modal-title { font-size: 16px; font-weight: 600; color: rgba(0,0,0,.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 40px); }
+.modal-close { width: 32px; height: 32px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,.45); border-radius: 4px; transition: all .2s; font-size: 16px; line-height: 1; flex-shrink: 0; }
+.modal-close:hover { background: rgba(0,0,0,.06); color: rgba(0,0,0,.85); }
+.modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+.modal-footer { padding: 12px 24px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+/* FORM */
+.form-item { margin-bottom: 18px; }
+.form-label { display: block; margin-bottom: 6px; font-size: 13px; color: rgba(0,0,0,.65); }
+.req { color: #f5222d; margin-left: 2px; }
+.form-input, .form-select, .form-textarea { width: 100%; height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 11px; font-size: 14px; outline: none; transition: all .2s; color: rgba(0,0,0,.85); background: #fff; font-family: inherit; }
+.form-textarea { height: auto; min-height: 80px; resize: vertical; padding: 6px 11px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.form-input[readonly] { background: #f5f5f5; color: rgba(0,0,0,.45); cursor: not-allowed; }
+.form-select { appearance: none; -webkit-appearance: none; padding-right: 28px; cursor: pointer; }
+.form-error { color: #f5222d; font-size: 12px; margin-top: 4px; display: none; }
+.form-error.show { display: block; }
+
+/* RICH TEXT */
+.rich-toolbar { border: 1px solid #d9d9d9; border-bottom: none; border-radius: 4px 4px 0 0; padding: 4px 8px; background: #fafafa; display: flex; gap: 2px; flex-wrap: wrap; align-items: center; }
+.rich-btn { width: 28px; height: 28px; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: rgba(0,0,0,.65); transition: all .15s; font-family: inherit; }
+.rich-btn:hover { background: #e6f7ff; border-color: #91d5ff; color: #1890ff; }
+.rich-sep { width: 1px; height: 18px; background: #d9d9d9; margin: 0 3px; flex-shrink: 0; }
+.rich-editor { border: 1px solid #d9d9d9; border-radius: 0 0 4px 4px; padding: 8px 11px; min-height: 100px; outline: none; font-size: 14px; line-height: 1.6; color: rgba(0,0,0,.85); overflow-y: auto; }
+.rich-editor:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.rich-editor:empty::before { content: attr(data-ph); color: rgba(0,0,0,.25); pointer-events: none; }
+.rich-editor h1 { font-size: 1.6em; font-weight: 700; margin: .3em 0; }
+.rich-editor h2 { font-size: 1.3em; font-weight: 600; margin: .3em 0; }
+.rich-editor h3 { font-size: 1.1em; font-weight: 600; margin: .3em 0; }
+.rich-editor ul, .rich-editor ol { padding-left: 20px; margin: 4px 0; }
+.rich-editor blockquote { border-left: 3px solid #1890ff; padding: 4px 12px; color: rgba(0,0,0,.45); margin: 4px 0; background: #f0f7ff; border-radius: 0 4px 4px 0; }
+
+/* DETAIL LAYOUT */
+.detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+.detail-section { margin-bottom: 20px; }
+.detail-section-title { font-size: 14px; font-weight: 600; color: rgba(0,0,0,.85); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.info-item { display: flex; flex-direction: column; gap: 4px; }
+.info-item label { font-size: 12px; color: rgba(0,0,0,.45); }
+
+/* COMMENTS */
+.comment-list { margin-bottom: 12px; max-height: 280px; overflow-y: auto; }
+.comment-item { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.comment-item:last-child { border-bottom: none; }
+.comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.comment-author { font-weight: 600; font-size: 13px; color: rgba(0,0,0,.85); }
+.comment-time { font-size: 12px; color: rgba(0,0,0,.35); }
+.comment-text { font-size: 13px; color: rgba(0,0,0,.65); line-height: 1.6; word-break: break-all; }
+.comment-empty { text-align: center; color: rgba(0,0,0,.25); padding: 20px 0; font-size: 13px; }
+
+/* REVIEW TABLE */
+.review-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.review-table th { background: #fafafa; padding: 8px 12px; text-align: left; border: 1px solid #f0f0f0; font-size: 13px; font-weight: 600; color: rgba(0,0,0,.65); }
+.review-table td { padding: 8px 12px; border: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+.review-table tbody tr:hover td { background: #fafafa; }
+.total-score-row td { background: #f0f7ff; font-weight: 700; }
+.radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.radio-label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; line-height: 1.5; }
+.radio-label input[type=radio] { accent-color: #1890ff; cursor: pointer; }
+.score-cell { font-weight: 600; color: #1890ff; min-width: 50px; text-align: center; }
+
+/* ALERT */
+.alert { padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; }
+.alert-error { background: #fff1f0; border: 1px solid #ffa39e; color: #cf1322; }
+
+/* CONFIG TABLE */
+.config-table { width: 100%; border-collapse: collapse; }
+.config-table th { background: #fafafa; padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 13px; font-weight: 600; color: rgba(0,0,0,.65); }
+.config-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.config-table tr:last-child td { border-bottom: none; }
+.weight-input { width: 90px; height: 28px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 2px 8px; font-size: 13px; outline: none; text-align: right; font-family: inherit; }
+.weight-input:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+
+/* TIMELINE */
+.timeline { padding: 4px 0; }
+.tl-item { display: flex; gap: 12px; padding-bottom: 20px; position: relative; }
+.tl-item::before { content: ""; position: absolute; left: 7px; top: 16px; bottom: 0; width: 1px; background: #e8e8e8; }
+.tl-item:last-child::before { display: none; }
+.tl-dot { width: 15px; height: 15px; border-radius: 50%; background: #1890ff; border: 2px solid #fff; box-shadow: 0 0 0 2px #1890ff; flex-shrink: 0; margin-top: 3px; }
+.tl-content { flex: 1; }
+.tl-title { font-weight: 600; font-size: 13px; color: rgba(0,0,0,.85); }
+.tl-sub { font-size: 12px; color: rgba(0,0,0,.45); margin-top: 2px; }
+
+/* FEATURE TREE */
+.feature-tree { border: 1px solid #d9d9d9; border-radius: 4px; padding: 8px; max-height: 180px; overflow-y: auto; background: #fff; }
+.tree-node-label { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 3px; font-size: 13px; }
+.tree-node-label:hover { background: #f5f5f5; }
+.tree-node-label input[type=checkbox] { accent-color: #1890ff; cursor: pointer; }
+.tree-toggle { cursor: pointer; user-select: none; font-size: 10px; color: rgba(0,0,0,.45); width: 12px; text-align: center; }
+.tree-children { padding-left: 18px; }
+
+.divider { height: 1px; background: #f0f0f0; margin: 16px 0; }
+
+/* TOAST */
+#toastEl { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.75); color: #fff; padding: 8px 20px; border-radius: 4px; font-size: 14px; z-index: 9999; pointer-events: none; transition: opacity .3s; opacity: 0; }
+#toastEl.show { opacity: 1; }
+
+@media (max-width: 900px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .main { padding: 12px; }
+}
+@media (max-width: 600px) {
+  .stats { grid-template-columns: 1fr; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+  .toolbar-center { width: 100%; }
+  .search-input { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toastEl"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">DPS <span>需求管理</span>平台</div>
+  <div class="nav-links">
+    <a class="nav-link active" href="requirements.html">需求管理</a>
+    <a class="nav-link" href="products.html">产品管理</a>
+    <a class="nav-link" href="iterations.html">迭代管理</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="page-title">需求管理</div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="stat-label">总需求数</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#fa8c16" stroke-width="2"/>
+          <path d="M12 8v4l3 3" stroke="#fa8c16" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="stat-label">待评审</div>
+        <div class="stat-value" id="stat-pending">0</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#52c41a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="stat-label">已完成</div>
+        <div class="stat-value" id="stat-done">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-primary" onclick="openNewModal()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        新建需求
+      </button>
+    </div>
+    <div class="toolbar-center">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input class="search-input" id="searchInput" type="text" placeholder="搜索需求标题/ID..." oninput="applyFilter()">
+      </div>
+      <div class="select-wrap">
+        <select class="filter-select" id="priorityFilter" onchange="applyFilter()">
+          <option value="">全部优先级</option>
+          <option value="紧急">紧急</option>
+          <option value="最高">最高</option>
+          <option value="较高">较高</option>
+          <option value="普通">普通</option>
+          <option value="较低">较低</option>
+        </select>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 3l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="select-wrap">
+        <select class="filter-select" id="statusFilter" onchange="applyFilter()">
+          <option value="">全部状态</option>
+          <option value="待评审">待评审</option>
+          <option value="待开发">待开发</option>
+          <option value="开发中">开发中</option>
+          <option value="已完成">已完成</option>
+          <option value="未通过">未通过</option>
+        </select>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 3l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-config" onclick="openConfigModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        评审分数配置
+      </button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="reqTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>需求标题</th>
+          <th>客户</th>
+          <th>需求优先级</th>
+          <th>创建人</th>
+          <th>需求状态</th>
+          <th>得分</th>
+          <th>最新迭代</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="reqTbody"></tbody>
+    </table>
+    <div id="emptyState" class="empty" style="display:none">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="12" width="48" height="40" rx="4" stroke="#d9d9d9" stroke-width="2" fill="#fafafa"/>
+        <path d="M20 24h24M20 32h16" stroke="#d9d9d9" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div style="color:rgba(0,0,0,.25);margin-top:8px;font-size:14px">暂无需求数据</div>
+    </div>
+    <div class="pagination-bar" id="paginationBar"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: NEW / EDIT REQUIREMENT -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="editOverlay">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <div class="modal-title" id="editModalTitle">新建需求</div>
+      <button class="modal-close" onclick="closeModal('editOverlay')" title="关闭">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item">
+        <label class="form-label">需求标题<span class="req">*</span></label>
+        <input class="form-input" id="f-title" maxlength="200" placeholder="请输入需求标题（最多200字）">
+        <div class="form-error" id="e-title">请输入需求标题</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">客户<span class="req">*</span></label>
+        <input class="form-input" id="f-customer" placeholder="请输入客户名称">
+        <div class="form-error" id="e-customer">请输入客户名称</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">需求优先级<span class="req">*</span></label>
+        <div class="select-wrap" style="width:100%">
+          <select class="form-select" id="f-priority">
+            <option value="">请选择优先级</option>
+            <option value="紧急">紧急</option>
+            <option value="最高">最高</option>
+            <option value="较高">较高</option>
+            <option value="普通">普通</option>
+            <option value="较低">较低</option>
+          </select>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 3l4 4 4-4" stroke="#bfbfbf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="form-error" id="e-priority">请选择需求优先级</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">创建人</label>
+        <input class="form-input" id="f-creator" value="管理员" placeholder="请输入创建人">
+      </div>
+      <div class="form-item">
+        <label class="form-label">用户故事</label>
+        <div class="rich-toolbar">
+          <button class="rich-btn" title="加粗" onmousedown="execRichCmd(event,'bold','rtEditor1')"><b>B</b></button>
+          <button class="rich-btn" title="斜体" onmousedown="execRichCmd(event,'italic','rtEditor1')"><i>I</i></button>
+          <button class="rich-btn" title="下划线" onmousedown="execRichCmd(event,'underline','rtEditor1')"><u>U</u></button>
+          <div class="rich-sep"></div>
+          <button class="rich-btn" title="标题1" onmousedown="execRichBlock(event,'rtEditor1','h1')">H1</button>
+          <button class="rich-btn" title="标题2" onmousedown="execRichBlock(event,'rtEditor1','h2')">H2</button>
+          <button class="rich-btn" title="标题3" onmousedown="execRichBlock(event,'rtEditor1','h3')">H3</button>
+          <div class="rich-sep"></div>
+          <button class="rich-btn" title="无序列表" onmousedown="execRichCmd(event,'insertUnorderedList','rtEditor1')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button class="rich-btn" title="有序列表" onmousedown="execRichCmd(event,'insertOrderedList','rtEditor1')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><text x="1" y="8" font-size="7" fill="currentColor">1</text><text x="1" y="14" font-size="7" fill="currentColor">2</text><text x="1" y="20" font-size="7" fill="currentColor">3</text></svg>
+          </button>
+          <button class="rich-btn" title="引用" onmousedown="execRichBlock(event,'rtEditor1','blockquote')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1" fill="currentColor" opacity=".2"/><rect x="13" y="3" width="8" height="8" rx="1" fill="currentColor" opacity=".2"/><path d="M5 11v5h4v-5H5zM15 11v5h4v-5h-4z" fill="currentColor" opacity=".35"/></svg>
+          </button>
+          <div class="rich-sep"></div>
+          <button class="rich-btn" title="清除格式" onmousedown="execRichCmd(event,'removeFormat','rtEditor1')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M17 4H7L6 10h5M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="rich-editor" id="rtEditor1" contenteditable="true" spellcheck="false" data-ph="请描述用户故事..."></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('editOverlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveRequirement()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: REQUIREMENT DETAIL -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="detailOverlay">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title" id="detailModalTitle">需求详情</div>
+      <button class="modal-close" onclick="closeModal('detailOverlay')" title="关闭">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-layout">
+        <!-- LEFT PANEL -->
+        <div>
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#1890ff" stroke-width="2" stroke-linecap="round"/></svg>
+              基本信息
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>需求ID</label>
+                <input class="form-input" id="d-id" readonly>
+              </div>
+              <div class="info-item">
+                <label>客户</label>
+                <input class="form-input" id="d-customer" placeholder="客户名称">
+              </div>
+              <div class="info-item">
+                <label>创建人</label>
+                <input class="form-input" id="d-creator" placeholder="创建人">
+              </div>
+              <div class="info-item">
+                <label>优先级</label>
+                <div class="select-wrap" style="width:100%">
+                  <select class="form-select" id="d-priority">
+                    <option value="紧急">紧急</option>
+                    <option value="最高">最高</option>
+                    <option value="较高">较高</option>
+                    <option value="普通">普通</option>
+                    <option value="较低">较低</option>
+                  </select>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 3l4 4 4-4" stroke="#bfbfbf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="info-item">
+                <label>得分</label>
+                <input class="form-input" id="d-score" readonly>
+              </div>
+              <div class="info-item">
+                <label>评审结果</label>
+                <div id="d-review-badge" style="padding-top:4px;min-height:28px;display:flex;align-items:center"></div>
+              </div>
+              <div class="info-item">
+                <label>需求状态</label>
+                <input class="form-input" id="d-status" readonly>
+              </div>
+              <div class="info-item">
+                <label>最新迭代</label>
+                <input class="form-input" id="d-iter" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              用户故事
+            </div>
+            <div class="rich-toolbar">
+              <button class="rich-btn" onmousedown="execRichCmd(event,'bold','d-story')"><b>B</b></button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'italic','d-story')"><i>I</i></button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'underline','d-story')"><u>U</u></button>
+              <div class="rich-sep"></div>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-story','h1')">H1</button>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-story','h2')">H2</button>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-story','h3')">H3</button>
+              <div class="rich-sep"></div>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'insertUnorderedList','d-story')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'removeFormat','d-story')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="rich-editor" id="d-story" contenteditable="true" spellcheck="false" style="min-height:90px"></div>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#1890ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              客户实现方案
+            </div>
+            <div class="rich-toolbar">
+              <button class="rich-btn" onmousedown="execRichCmd(event,'bold','d-solution')"><b>B</b></button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'italic','d-solution')"><i>I</i></button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'underline','d-solution')"><u>U</u></button>
+              <div class="rich-sep"></div>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-solution','h1')">H1</button>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-solution','h2')">H2</button>
+              <button class="rich-btn" onmousedown="execRichBlock(event,'d-solution','h3')">H3</button>
+              <div class="rich-sep"></div>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'insertUnorderedList','d-solution')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+              <button class="rich-btn" onmousedown="execRichCmd(event,'removeFormat','d-solution')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="rich-editor" id="d-solution" contenteditable="true" spellcheck="false" style="min-height:90px"></div>
+          </div>
+
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z" stroke="#1890ff" stroke-width="2" stroke-linejoin="round"/><path d="M13 2v7h7" stroke="#1890ff" stroke-width="2" stroke-linejoin="round"/></svg>
+              关联功能
+            </div>
+            <div class="feature-tree" id="featureTree">
+              <div style="color:rgba(0,0,0,.25);font-size:13px;padding:4px 8px">暂无产品数据，请在产品管理中添加</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div>
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="#1890ff" stroke-width="2" stroke-linejoin="round"/></svg>
+              评论区
+            </div>
+            <div class="comment-list" id="commentList"></div>
+            <div style="margin-bottom:8px">
+              <textarea class="form-textarea" id="commentInput" placeholder="写下你的评论..." style="min-height:64px;resize:none"></textarea>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addComment()" style="width:100%;justify-content:center">提交评论</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('detailOverlay')">关闭</button>
+      <button class="btn btn-primary" onclick="saveDetail()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: REVIEW SCORING -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="reviewOverlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="reviewModalTitle">评审打分</div>
+      <button class="modal-close" onclick="closeModal('reviewOverlay')" title="关闭">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-error" id="reviewError" style="display:none"></div>
+      <table class="review-table">
+        <thead>
+          <tr>
+            <th style="min-width:90px">评审维度</th>
+            <th>分值选择</th>
+            <th style="width:60px">权重</th>
+            <th style="width:70px;text-align:center">得分</th>
+          </tr>
+        </thead>
+        <tbody id="reviewTbody"></tbody>
+        <tfoot>
+          <tr class="total-score-row">
+            <td colspan="3" style="text-align:right;padding-right:16px">合计总分</td>
+            <td class="score-cell" id="totalScoreDisplay">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="form-item" style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <label class="form-label" style="margin:0;white-space:nowrap">手动调整总分</label>
+        <input class="form-input" id="manualScore" type="number" min="0" max="999" step="0.1" oninput="onManualScore()" style="max-width:130px">
+        <span style="font-size:12px;color:rgba(0,0,0,.35)">可覆盖自动计算结果</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-item">
+        <label class="form-label">评审结果<span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="reviewResult" value="通过"> <span>通过</span></label>
+          <label class="radio-label"><input type="radio" name="reviewResult" value="不通过"> <span>不通过</span></label>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">评审评论 <span style="color:rgba(0,0,0,.35);font-size:12px;font-weight:400">（最多200字）</span></label>
+        <textarea class="form-textarea" id="reviewComment" maxlength="200" placeholder="请输入评审评论..." style="min-height:70px;resize:none" oninput="updateCommentCount()"></textarea>
+        <div style="text-align:right;font-size:11px;color:rgba(0,0,0,.35);margin-top:2px"><span id="commentCount">0</span>/200</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('reviewOverlay')">取消</button>
+      <button class="btn btn-default" onclick="saveReviewScore()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" stroke-width="2"/><polyline points="7 3 7 8 15 8" stroke="currentColor" stroke-width="2"/></svg>
+        保存分数
+      </button>
+      <button class="btn btn-primary" onclick="submitReview()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        提交评审
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: REVIEW CONFIG -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="configOverlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">评审分数配置</div>
+      <button class="modal-close" onclick="closeModal('configOverlay')" title="关闭">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:rgba(0,0,0,.45);margin-bottom:16px;line-height:1.6">
+        配置各评审维度的权重。
+        <strong style="color:rgba(0,0,0,.65)">保存后不影响已有得分（分数大于0）的需求。</strong>
+      </p>
+      <table class="config-table">
+        <thead>
+          <tr><th>评审维度</th><th style="text-align:right">权重</th></tr>
+        </thead>
+        <tbody id="configTbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('configOverlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MODAL: ITERATION HISTORY -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="iterOverlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="iterModalTitle">迭代历史</div>
+      <button class="modal-close" onclick="closeModal('iterOverlay')" title="关闭">&#10005;</button>
+    </div>
+    <div class="modal-body" id="iterBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('iterOverlay')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS & STATE
+// ============================================================
+var LS_KEY = 'dps_requirements';
+var LS_CONFIG = 'dps_review_config';
+var DEFAULT_CONFIG = [
+  { name: '使用普遍性', weight: 0.1 },
+  { name: '用户价值',   weight: 0.2 },
+  { name: '开发难度',   weight: 0.2 },
+  { name: '是否付费',   weight: 0.5 },
+  { name: '紧急程度',   weight: 0.5 }
+];
+
+var requirements = [];
+var filteredReqs = [];
+var currentPage = 1;
+var PAGE_SIZE = 10;
+var editingId  = null;
+var reviewingId = null;
+var detailId    = null;
+var toastTimer  = null;
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  var stored = localStorage.getItem(LS_KEY);
+  if (stored) {
+    try { requirements = JSON.parse(stored); } catch(e) { requirements = []; }
+  }
+  if (!requirements || requirements.length === 0) {
+    requirements = buildSampleData();
+    saveToStorage();
+  }
+  filteredReqs = requirements.slice();
+  render();
+}
+
+function buildSampleData() {
+  var defs = [
+    {
+      title: '用户自助重置密码功能', customer: '中国建设银行', priority: '最高',
+      creator: '张三', status: '待评审', score: 0, reviewResult: '',
+      reviewComment: '', reviewScores: {},
+      userStory: '<p>作为银行用户，我希望能够通过手机验证码自助重置密码，以便在忘记密码时无需联系客服。</p>',
+      solution: '', iterationHistory: [], comments: [], latestIteration: '', relatedFeatures: []
+    },
+    {
+      title: '报表导出为Excel格式', customer: '阿里巴巴集团', priority: '较高',
+      creator: '李四', status: '待开发', score: 8.5, reviewResult: '通过',
+      reviewComment: '功能实用，用户需求高', reviewScores: {},
+      userStory: '<p>作为财务人员，我希望能够将系统报表一键导出为Excel格式，方便进一步数据处理。</p>',
+      solution: '<p>使用 SheetJS 库实现前端导出，支持格式化样式。</p>',
+      iterationHistory: [{ sprint: 'Sprint 2024-Q1', dateRange: '2024-01-15 ~ 2024-01-31', assignedAt: '2024-01-10' }],
+      comments: [{ author: '王五', text: '这个功能用户反馈很迫切', time: '2024-01-05 14:23' }],
+      latestIteration: 'Sprint 2024-Q1', relatedFeatures: []
+    },
+    {
+      title: '移动端适配优化', customer: '腾讯科技', priority: '普通',
+      creator: '王五', status: '开发中', score: 6.2, reviewResult: '通过',
+      reviewComment: '', reviewScores: {},
+      userStory: '<p>作为移动端用户，我希望系统能在手机上完美显示，提升使用体验。</p>',
+      solution: '',
+      iterationHistory: [{ sprint: 'Sprint 2024-Q2', dateRange: '2024-04-01 ~ 2024-04-15', assignedAt: '2024-03-28' }],
+      comments: [], latestIteration: 'Sprint 2024-Q2', relatedFeatures: []
+    },
+    {
+      title: '新增数据看板功能', customer: '华为技术', priority: '紧急',
+      creator: '赵六', status: '已完成', score: 12.0, reviewResult: '通过',
+      reviewComment: '高价值功能，客户付费意愿强', reviewScores: {},
+      userStory: '<p>作为管理者，我希望有一个数据看板展示核心业务指标，支持自定义配置。</p>',
+      solution: '<p>采用 ECharts 图表库，实现可拖拽式看板布局。</p>',
+      iterationHistory: [
+        { sprint: 'Sprint 2023-Q4', dateRange: '2023-10-16 ~ 2023-10-31', assignedAt: '2023-10-12' },
+        { sprint: 'Sprint 2023-Q3', dateRange: '2023-07-01 ~ 2023-07-15', assignedAt: '2023-06-30' }
+      ],
+      comments: [{ author: '管理员', text: '已完成验收，客户满意', time: '2023-11-02 09:00' }],
+      latestIteration: 'Sprint 2023-Q4', relatedFeatures: []
+    },
+    {
+      title: '多语言国际化支持', customer: '字节跳动', priority: '较低',
+      creator: '管理员', status: '未通过', score: 2.1, reviewResult: '不通过',
+      reviewComment: '当前用户基础不支持，延期评估', reviewScores: {},
+      userStory: '<p>作为海外用户，我希望系统支持英语、日语等多语言界面。</p>',
+      solution: '', iterationHistory: [], comments: [],
+      latestIteration: '', relatedFeatures: []
+    }
+  ];
+  var today = new Date();
+  return defs.map(function(d, i) {
+    var dt = new Date(today.getTime() - (5 - i) * 259200000);
+    var yy = dt.getFullYear();
+    var mm = pad2(dt.getMonth() + 1);
+    var dd = pad2(dt.getDate());
+    return Object.assign({}, d, {
+      id: yy + '' + mm + '' + dd + '-00' + (i + 1),
+      createdAt: yy + '-' + mm + '-' + dd
+    });
+  });
+}
+
+function saveToStorage() {
+  localStorage.setItem(LS_KEY, JSON.stringify(requirements));
+}
+
+function genNewId() {
+  var d   = new Date();
+  var yy  = d.getFullYear();
+  var mm  = pad2(d.getMonth() + 1);
+  var dd  = pad2(d.getDate());
+  var base = yy + '' + mm + '' + dd;
+  var cnt  = requirements.filter(function(r) { return r.id && r.id.slice(0, 8) === base; }).length;
+  return base + '-' + pad3(cnt + 1);
+}
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function pad3(n) { return n < 10 ? '00' + n : n < 100 ? '0' + n : '' + n; }
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  updateStats();
+  renderTable();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent   = requirements.length;
+  document.getElementById('stat-pending').textContent = requirements.filter(function(r){ return r.status === '待评审'; }).length;
+  document.getElementById('stat-done').textContent    = requirements.filter(function(r){ return r.status === '已完成'; }).length;
+}
+
+function applyFilter() {
+  var q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  var p = document.getElementById('priorityFilter').value;
+  var s = document.getElementById('statusFilter').value;
+  filteredReqs = requirements.filter(function(r) {
+    var mq = !q || (r.title || '').toLowerCase().indexOf(q) >= 0 || (r.id || '').toLowerCase().indexOf(q) >= 0;
+    var mp = !p || r.priority === p;
+    var ms = !s || r.status === s;
+    return mq && mp && ms;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  var tbody     = document.getElementById('reqTbody');
+  var emptyEl   = document.getElementById('emptyState');
+  var total     = filteredReqs.length;
+  var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  var start    = (currentPage - 1) * PAGE_SIZE;
+  var pageData = filteredReqs.slice(start, start + PAGE_SIZE);
+
+  if (total === 0) {
+    tbody.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    tbody.innerHTML = pageData.map(function(r) {
+      var scoreText = (r.score && r.score > 0) ? Number(r.score).toFixed(1) : '-';
+      var iterText  = r.latestIteration || '';
+      var iterCell  = iterText
+        ? '<button class="iter-link" onclick="openIterModal(\'' + esc(r.id) + '\')" title="' + esc(iterText) + '">' + esc(iterText) + '</button>'
+        : '<button class="iter-none" onclick="openIterModal(\'' + esc(r.id) + '\')">暂无迭代</button>';
+      return '<tr>' +
+        '<td class="td-id">' + esc(r.id) + '</td>' +
+        '<td class="td-title" title="' + esc(r.title) + '">' + esc(r.title) + '</td>' +
+        '<td>' + esc(r.customer) + '</td>' +
+        '<td>' + priorityBadge(r.priority) + '</td>' +
+        '<td>' + esc(r.creator) + '</td>' +
+        '<td>' + statusBadge(r.status) + '</td>' +
+        '<td><button class="score-link" onclick="openReviewModal(\'' + esc(r.id) + '\')">' + scoreText + '</button></td>' +
+        '<td>' + iterCell + '</td>' +
+        '<td><div class="td-ops">' +
+          '<button class="btn btn-link btn-sm" onclick="openDetailModal(\'' + esc(r.id) + '\')">详情</button>' +
+          '<button class="btn btn-link btn-sm" onclick="openEditModal(\'' + esc(r.id) + '\')">编辑</button>' +
+          '<button class="btn btn-danger-link btn-sm" onclick="deleteReq(\'' + esc(r.id) + '\')">删除</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+  renderPagination(total, totalPages);
+}
+
+function renderPagination(total, totalPages) {
+  var bar = document.getElementById('paginationBar');
+  if (total === 0) { bar.innerHTML = ''; return; }
+  var html = '<span style="color:rgba(0,0,0,.45)">共 ' + total + ' 条</span>';
+  html += '<button class="page-btn" onclick="goPage(' + (currentPage - 1) + ')"' + (currentPage === 1 ? ' disabled' : '') + '>&#8249;</button>';
+  for (var i = 1; i <= totalPages; i++) {
+    if (totalPages <= 7 || Math.abs(i - currentPage) <= 2 || i === 1 || i === totalPages) {
+      html += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+    } else if (Math.abs(i - currentPage) === 3) {
+      html += '<span style="padding:0 2px;color:rgba(0,0,0,.35)">…</span>';
+    }
+  }
+  html += '<button class="page-btn" onclick="goPage(' + (currentPage + 1) + ')"' + (currentPage === totalPages ? ' disabled' : '') + '>&#8250;</button>';
+  bar.innerHTML = html;
+}
+
+function goPage(p) {
+  var tp = Math.max(1, Math.ceil(filteredReqs.length / PAGE_SIZE));
+  currentPage = Math.max(1, Math.min(p, tp));
+  renderTable();
+}
+
+// ============================================================
+// BADGES
+// ============================================================
+function priorityBadge(p) {
+  var cls = { '紧急': 'badge-red', '最高': 'badge-orange', '较高': 'badge-blue', '普通': 'badge-green', '较低': 'badge-gray' };
+  return '<span class="badge ' + (cls[p] || 'badge-gray') + '">' + esc(p) + '</span>';
+}
+
+function statusBadge(s) {
+  var cls = { '未通过': 'badge-red', '待评审': 'badge-gray', '待开发': 'badge-blue', '已完成': 'badge-green', '开发中': 'badge-cyan' };
+  return '<span class="badge ' + (cls[s] || 'badge-gray') + '">' + esc(s) + '</span>';
+}
+
+function reviewBadge(r) {
+  if (!r || r === '') return '<span class="badge badge-gray">待评审</span>';
+  if (r === '通过')    return '<span class="badge badge-green">通过</span>';
+  return '<span class="badge badge-orange">不通过</span>';
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+  if (!document.querySelector('.modal-overlay.show')) {
+    document.body.style.overflow = '';
+  }
+}
+
+document.querySelectorAll('.modal-overlay').forEach(function(ov) {
+  ov.addEventListener('click', function(e) {
+    if (e.target === ov) closeModal(ov.id);
+  });
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var shown = document.querySelector('.modal-overlay.show');
+    if (shown) closeModal(shown.id);
+  }
+});
+
+// ============================================================
+// NEW / EDIT MODAL
+// ============================================================
+function openNewModal() {
+  editingId = null;
+  document.getElementById('editModalTitle').textContent = '新建需求';
+  document.getElementById('f-title').value    = '';
+  document.getElementById('f-customer').value = '';
+  document.getElementById('f-priority').value = '';
+  document.getElementById('f-creator').value  = '管理员';
+  document.getElementById('rtEditor1').innerHTML = '';
+  clearErrors(['e-title', 'e-customer', 'e-priority']);
+  openModal('editOverlay');
+  setTimeout(function() { document.getElementById('f-title').focus(); }, 80);
+}
+
+function openEditModal(id) {
+  var r = findById(id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('editModalTitle').textContent = '编辑需求';
+  document.getElementById('f-title').value    = r.title    || '';
+  document.getElementById('f-customer').value = r.customer || '';
+  document.getElementById('f-priority').value = r.priority || '';
+  document.getElementById('f-creator').value  = r.creator  || '管理员';
+  document.getElementById('rtEditor1').innerHTML = r.userStory || '';
+  clearErrors(['e-title', 'e-customer', 'e-priority']);
+  openModal('editOverlay');
+}
+
+function saveRequirement() {
+  var title    = (document.getElementById('f-title').value || '').trim();
+  var customer = (document.getElementById('f-customer').value || '').trim();
+  var priority = document.getElementById('f-priority').value;
+  var creator  = (document.getElementById('f-creator').value || '').trim() || '管理员';
+  var story    = document.getElementById('rtEditor1').innerHTML;
+
+  var ok = true;
+  if (!title)    { showError('e-title');    ok = false; } else hideError('e-title');
+  if (!customer) { showError('e-customer'); ok = false; } else hideError('e-customer');
+  if (!priority) { showError('e-priority'); ok = false; } else hideError('e-priority');
+  if (!ok) return;
+
+  if (editingId) {
+    var idx = findIdxById(editingId);
+    if (idx >= 0) {
+      Object.assign(requirements[idx], { title: title, customer: customer, priority: priority, creator: creator, userStory: story });
+    }
+  } else {
+    requirements.push({
+      id: genNewId(), title: title, customer: customer, priority: priority,
+      creator: creator, status: '待评审', score: 0, reviewResult: '',
+      reviewComment: '', reviewScores: {}, userStory: story, solution: '',
+      iterationHistory: [], comments: [], latestIteration: '', relatedFeatures: [],
+      createdAt: new Date().toISOString().slice(0, 10)
+    });
+  }
+  saveToStorage();
+  applyFilter();
+  closeModal('editOverlay');
+  showToast(editingId ? '需求已更新' : '需求已创建');
+}
+
+// ============================================================
+// DETAIL MODAL
+// ============================================================
+function openDetailModal(id) {
+  var r = findById(id);
+  if (!r) return;
+  detailId = id;
+  document.getElementById('d-id').value       = r.id       || '';
+  document.getElementById('d-customer').value = r.customer || '';
+  document.getElementById('d-creator').value  = r.creator  || '';
+  document.getElementById('d-priority').value = r.priority || '普通';
+  document.getElementById('d-score').value    = (r.score && r.score > 0) ? Number(r.score).toFixed(1) : '-';
+  document.getElementById('d-status').value   = r.status   || '';
+  document.getElementById('d-iter').value     = r.latestIteration || '-';
+  document.getElementById('d-review-badge').innerHTML = reviewBadge(r.reviewResult);
+  document.getElementById('d-story').innerHTML    = r.userStory || '';
+  document.getElementById('d-solution').innerHTML = r.solution  || '';
+  document.getElementById('commentInput').value   = '';
+  renderComments(r);
+  loadFeatureTree(r.relatedFeatures || []);
+  openModal('detailOverlay');
+}
+
+function saveDetail() {
+  if (!detailId) return;
+  var idx = findIdxById(detailId);
+  if (idx < 0) return;
+  requirements[idx].customer        = (document.getElementById('d-customer').value || '').trim();
+  requirements[idx].creator         = (document.getElementById('d-creator').value  || '').trim();
+  requirements[idx].priority        = document.getElementById('d-priority').value;
+  requirements[idx].userStory       = document.getElementById('d-story').innerHTML;
+  requirements[idx].solution        = document.getElementById('d-solution').innerHTML;
+  requirements[idx].relatedFeatures = getCheckedFeatures();
+  saveToStorage();
+  applyFilter();
+  showToast('保存成功');
+}
+
+function renderComments(r) {
+  var list = document.getElementById('commentList');
+  var cmts = r.comments || [];
+  if (cmts.length === 0) {
+    list.innerHTML = '<div class="comment-empty">暂无评论</div>';
+    return;
+  }
+  list.innerHTML = cmts.map(function(c) {
+    return '<div class="comment-item">' +
+      '<div class="comment-meta">' +
+        '<span class="comment-author">' + esc(c.author) + '</span>' +
+        '<span class="comment-time">' + esc(c.time) + '</span>' +
+      '</div>' +
+      '<div class="comment-text">' + esc(c.text) + '</div>' +
+    '</div>';
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+function addComment() {
+  if (!detailId) return;
+  var text = (document.getElementById('commentInput').value || '').trim();
+  if (!text) return;
+  var idx = findIdxById(detailId);
+  if (idx < 0) return;
+  if (!requirements[idx].comments) requirements[idx].comments = [];
+  requirements[idx].comments.push({
+    author: '管理员',
+    text:   text,
+    time:   new Date().toLocaleString('zh-CN', { hour12: false })
+  });
+  saveToStorage();
+  document.getElementById('commentInput').value = '';
+  renderComments(requirements[idx]);
+}
+
+// ============================================================
+// FEATURE TREE
+// ============================================================
+function loadFeatureTree(selected) {
+  var tree = document.getElementById('featureTree');
+  var products = [];
+  try { products = JSON.parse(localStorage.getItem('dps_products') || '[]'); } catch(e) {}
+  if (!products.length) {
+    tree.innerHTML = '<div style="color:rgba(0,0,0,.25);font-size:13px;padding:4px 8px">暂无产品数据，请在产品管理中添加</div>';
+    return;
+  }
+  tree.innerHTML = products.map(function(p) {
+    var feats = p.features || [];
+    var childHtml = feats.map(function(f) {
+      var chk = selected.indexOf('f_' + f.id) >= 0 ? ' checked' : '';
+      return '<div class="tree-node" style="padding-left:18px">' +
+        '<div class="tree-node-label">' +
+          '<span class="tree-toggle"></span>' +
+          '<input type="checkbox"' + chk + ' value="f_' + esc(f.id) + '"> ' +
+          '<span>' + esc(f.name) + '</span>' +
+        '</div></div>';
+    }).join('');
+    var pchk = selected.indexOf('p_' + p.id) >= 0 ? ' checked' : '';
+    return '<div class="tree-node">' +
+      '<div class="tree-node-label">' +
+        '<span class="tree-toggle">' + (feats.length ? '&#9658;' : '') + '</span>' +
+        '<input type="checkbox"' + pchk + ' value="p_' + esc(p.id) + '"> ' +
+        '<span style="font-weight:600">' + esc(p.name) + '</span>' +
+      '</div>' +
+      childHtml +
+    '</div>';
+  }).join('');
+}
+
+function getCheckedFeatures() {
+  var boxes = document.querySelectorAll('#featureTree input[type=checkbox]:checked');
+  return Array.prototype.map.call(boxes, function(b){ return b.value; });
+}
+
+// ============================================================
+// REVIEW SCORING MODAL
+// ============================================================
+function getConfig() {
+  try {
+    var c = JSON.parse(localStorage.getItem(LS_CONFIG));
+    if (c && c.length) return c;
+  } catch(e) {}
+  return DEFAULT_CONFIG.map(function(x){ return { name: x.name, weight: x.weight }; });
+}
+
+function openReviewModal(id) {
+  var r = findById(id);
+  if (!r) return;
+  reviewingId = id;
+  document.getElementById('reviewModalTitle').textContent = '评审打分 - ' + r.title;
+  document.getElementById('reviewError').style.display   = 'none';
+  document.getElementById('reviewComment').value         = r.reviewComment || '';
+  document.getElementById('commentCount').textContent    = (r.reviewComment || '').length;
+
+  var config = getConfig();
+  var saved  = r.reviewScores || {};
+  var tbody  = document.getElementById('reviewTbody');
+  tbody.innerHTML = config.map(function(c, i) {
+    var sv = saved[c.name] || 0;
+    if (c.name === '是否付费') {
+      return '<tr>' +
+        '<td>' + esc(c.name) + '</td>' +
+        '<td><div class="radio-group">' +
+          '<label class="radio-label"><input type="radio" name="rv_' + i + '" value="1"' + (sv !== 3 ? ' checked' : '') + ' onchange="calcTotal()"> 不付费(1分)</label>' +
+          '<label class="radio-label"><input type="radio" name="rv_' + i + '" value="3"' + (sv === 3 ? ' checked' : '') + ' onchange="calcTotal()"> 付费(3分)</label>' +
+        '</div></td>' +
+        '<td>' + c.weight + '</td>' +
+        '<td class="score-cell" id="sub_' + i + '">0.00</td>' +
+        '</tr>';
+    }
+    return '<tr>' +
+      '<td>' + esc(c.name) + '</td>' +
+      '<td><div class="radio-group">' +
+        [1,2,3].map(function(v) {
+          return '<label class="radio-label"><input type="radio" name="rv_' + i + '" value="' + v + '"' + (sv === v ? ' checked' : '') + ' onchange="calcTotal()"> ' + v + '分</label>';
+        }).join('') +
+      '</div></td>' +
+      '<td>' + c.weight + '</td>' +
+      '<td class="score-cell" id="sub_' + i + '">0.00</td>' +
+      '</tr>';
+  }).join('');
+
+  document.querySelectorAll('input[name="reviewResult"]').forEach(function(rb) {
+    rb.checked = rb.value === (r.reviewResult || '');
+  });
+
+  calcTotal();
+  document.getElementById('manualScore').value = (r.score && r.score > 0) ? Number(r.score).toFixed(2) : '';
+  openModal('reviewOverlay');
+}
+
+function calcTotal() {
+  var config = getConfig();
+  var total  = 0;
+  config.forEach(function(c, i) {
+    var sel = document.querySelector('input[name="rv_' + i + '"]:checked');
+    var val = sel ? parseFloat(sel.value) : 0;
+    var sub = val * c.weight;
+    total  += sub;
+    var el = document.getElementById('sub_' + i);
+    if (el) el.textContent = sub.toFixed(2);
+  });
+  document.getElementById('totalScoreDisplay').textContent = total.toFixed(2);
+  document.getElementById('manualScore').value = total.toFixed(2);
+}
+
+function onManualScore() {
+  var v = parseFloat(document.getElementById('manualScore').value);
+  if (!isNaN(v)) document.getElementById('totalScoreDisplay').textContent = v.toFixed(2);
+}
+
+function updateCommentCount() {
+  document.getElementById('commentCount').textContent = (document.getElementById('reviewComment').value || '').length;
+}
+
+function getReviewData() {
+  var config = getConfig();
+  var scores = {};
+  config.forEach(function(c, i) {
+    var sel = document.querySelector('input[name="rv_' + i + '"]:checked');
+    scores[c.name] = sel ? parseFloat(sel.value) : 0;
+  });
+  var raw    = document.getElementById('manualScore').value;
+  var score  = raw !== '' ? parseFloat(raw) : 0;
+  var resEl  = document.querySelector('input[name="reviewResult"]:checked');
+  var result = resEl ? resEl.value : '';
+  var comment = (document.getElementById('reviewComment').value || '').trim();
+  return { scores: scores, score: score, result: result, comment: comment };
+}
+
+function saveReviewScore() {
+  if (!reviewingId) return;
+  var d   = getReviewData();
+  var idx = findIdxById(reviewingId);
+  if (idx < 0) return;
+  requirements[idx].reviewScores = d.scores;
+  requirements[idx].score        = d.score;
+  requirements[idx].reviewComment = d.comment;
+  saveToStorage();
+  applyFilter();
+  closeModal('reviewOverlay');
+  showToast('分数已保存');
+}
+
+function submitReview() {
+  if (!reviewingId) return;
+  var d    = getReviewData();
+  var errEl = document.getElementById('reviewError');
+  if (!d.result) {
+    errEl.textContent    = '请选择评审结果（通过 / 不通过）后再提交';
+    errEl.style.display  = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  var idx = findIdxById(reviewingId);
+  if (idx < 0) return;
+  requirements[idx].reviewScores  = d.scores;
+  requirements[idx].score         = d.score;
+  requirements[idx].reviewResult  = d.result;
+  requirements[idx].reviewComment = d.comment;
+  requirements[idx].status        = d.result === '通过' ? '待开发' : '未通过';
+  saveToStorage();
+  applyFilter();
+  closeModal('reviewOverlay');
+  showToast('评审已提交，状态已更新');
+}
+
+// ============================================================
+// CONFIG MODAL
+// ============================================================
+function openConfigModal() {
+  var config = getConfig();
+  document.getElementById('configTbody').innerHTML = config.map(function(c, i) {
+    return '<tr>' +
+      '<td>' + esc(c.name) + '</td>' +
+      '<td style="text-align:right"><input class="weight-input" id="wt_' + i + '" type="number" value="' + c.weight + '" min="0" max="10" step="0.01"></td>' +
+    '</tr>';
+  }).join('');
+  openModal('configOverlay');
+}
+
+function saveConfig() {
+  var config    = getConfig();
+  var newConfig = config.map(function(c, i) {
+    var inp = document.getElementById('wt_' + i);
+    var val = inp ? parseFloat(inp.value) : c.weight;
+    if (isNaN(val) || val < 0) val = c.weight;
+    return { name: c.name, weight: val };
+  });
+  localStorage.setItem(LS_CONFIG, JSON.stringify(newConfig));
+  closeModal('configOverlay');
+  showToast('配置已保存，不影响已有得分的需求');
+}
+
+// ============================================================
+// ITERATION MODAL
+// ============================================================
+function openIterModal(id) {
+  var r = findById(id);
+  if (!r) return;
+  document.getElementById('iterModalTitle').textContent = '迭代历史 - ' + r.title;
+  var body = document.getElementById('iterBody');
+  var hist = r.iterationHistory || [];
+  if (hist.length === 0) {
+    body.innerHTML = '<div style="text-align:center;color:rgba(0,0,0,.25);padding:40px 0;font-size:14px">暂无迭代历史</div>';
+  } else {
+    body.innerHTML = '<div class="timeline">' + hist.map(function(it) {
+      return '<div class="tl-item">' +
+        '<div class="tl-dot"></div>' +
+        '<div class="tl-content">' +
+          '<div class="tl-title">' + esc(it.sprint) + '</div>' +
+          '<div class="tl-sub">周期：' + esc(it.dateRange) + '</div>' +
+          '<div class="tl-sub">加入时间：' + esc(it.assignedAt) + '</div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  }
+  openModal('iterOverlay');
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function deleteReq(id) {
+  var r = findById(id);
+  if (!r) return;
+  if (!confirm('确定要删除需求\n"' + r.title + '"\n此操作不可撤销。')) return;
+  requirements = requirements.filter(function(x){ return x.id !== id; });
+  saveToStorage();
+  applyFilter();
+  showToast('需求已删除');
+}
+
+// ============================================================
+// RICH TEXT EDITOR
+// ============================================================
+function execRichCmd(e, cmd, editorId) {
+  e.preventDefault();
+  var el = document.getElementById(editorId);
+  if (!el) return;
+  el.focus();
+  document.execCommand(cmd, false, null);
+}
+
+function execRichBlock(e, editorId, tag) {
+  e.preventDefault();
+  var el = document.getElementById(editorId);
+  if (!el) return;
+  el.focus();
+  document.execCommand('formatBlock', false, tag);
+}
+
+// ============================================================
+// UTILITY
+// ============================================================
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;');
+}
+
+function findById(id) {
+  for (var i = 0; i < requirements.length; i++) {
+    if (requirements[i].id === id) return requirements[i];
+  }
+  return null;
+}
+
+function findIdxById(id) {
+  for (var i = 0; i < requirements.length; i++) {
+    if (requirements[i].id === id) return i;
+  }
+  return -1;
+}
+
+function showError(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.add('show');
+}
+
+function hideError(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+}
+
+function clearErrors(ids) {
+  ids.forEach(function(id){ hideError(id); });
+}
+
+function showToast(msg) {
+  var el = document.getElementById('toastEl');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+
+// ============================================================
+// BOOTSTRAP
+// ============================================================
+init();
+</script>
+</body>
+</html>

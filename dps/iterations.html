@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>DPS 迭代管理平台</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 22px; color: rgba(0,0,0,.85); background: #f0f2f5; }
+.nav { background: #001529; height: 48px; display: flex; align-items: center; padding: 0 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.nav-logo { color: #fff; font-size: 16px; font-weight: 600; margin-right: 40px; }
+.nav-logo span { color: #1890ff; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link { color: rgba(255,255,255,.65); padding: 0 16px; height: 48px; display: flex; align-items: center; text-decoration: none; border-bottom: 2px solid transparent; transition: all .2s; font-size: 14px; }
+.nav-link:hover { color: #fff; }
+.nav-link.active { color: #fff; border-bottom-color: #1890ff; }
+.main { padding: 24px; max-width: 1600px; margin: 0 auto; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: #fff; border-radius: 4px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,21,41,.08); display: flex; align-items: center; gap: 16px; }
+.stat-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 22px; }
+.stat-icon.blue{background:#e6f7ff;}.stat-icon.orange{background:#fff7e6;}.stat-icon.green{background:#f6ffed;}.stat-icon.purple{background:#f9f0ff;}
+.stat-label { font-size: 13px; color: rgba(0,0,0,.45); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 600; color: rgba(0,0,0,.85); line-height: 1.2; }
+.toolbar { background: #fff; border-radius: 4px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,21,41,.08); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.content-layout { display: flex; gap: 16px; align-items: flex-start; }
+.tree-panel { width: 280px; flex-shrink: 0; background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,21,41,.08); overflow: hidden; }
+.tree-panel-header { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.tree-panel-title { font-size: 14px; font-weight: 600; color: rgba(0,0,0,.85); }
+.tree-container { overflow-y: auto; max-height: calc(100vh - 320px); min-height: 200px; }
+.tree-row { display: flex; align-items: center; height: 36px; padding: 0 8px; cursor: pointer; transition: background .15s; border-left: 3px solid transparent; user-select: none; }
+.tree-row:hover { background: #f5f5f5; }
+.tree-row.selected { background: #e6f7ff; border-left-color: #1890ff; }
+.node-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: rgba(0,0,0,.65); }
+.node-count { font-size: 12px; color: rgba(0,0,0,.35); margin-left: 4px; flex-shrink: 0; }
+.req-panel { flex: 1; min-width: 0; background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,21,41,.08); padding: 16px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 15px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; font-size: 14px; line-height: 22px; transition: all .2s; white-space: nowrap; outline: none; font-family: inherit; }
+.btn-primary{background:#1890ff;border-color:#1890ff;color:#fff;}.btn-primary:hover{background:#40a9ff;border-color:#40a9ff;}
+.btn-green{background:#fff;border-color:#52c41a;color:#52c41a;}.btn-green:hover{background:#f6ffed;}
+.btn-default{background:#fff;border-color:#d9d9d9;color:rgba(0,0,0,.65);}.btn-default:hover{border-color:#40a9ff;color:#40a9ff;}
+.btn-link{background:transparent;border-color:transparent;color:#1890ff;padding:0 4px;font-size:13px;cursor:pointer;font-family:inherit;}
+.btn-link:hover{color:#40a9ff;}
+.btn-danger-link{background:transparent;border-color:transparent;color:#ff4d4f;padding:0 4px;font-size:13px;cursor:pointer;font-family:inherit;}
+.btn-danger-link:hover{color:#ff7875;}
+.btn-sm{padding:2px 10px;font-size:13px;}
+.search-input{height:32px;border:1px solid #d9d9d9;border-radius:4px;padding:4px 11px 4px 32px;font-size:14px;outline:none;width:100%;background:#fff;transition:all .2s;font-family:inherit;}
+.search-input:focus{border-color:#40a9ff;box-shadow:0 0 0 2px rgba(24,144,255,.2);}
+.search-wrap{position:relative;display:inline-flex;align-items:center;}
+.search-wrap svg{position:absolute;left:10px;pointer-events:none;color:#bfbfbf;}
+.filter-select{height:32px;border:1px solid #d9d9d9;border-radius:4px;padding:4px 28px 4px 11px;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;min-width:120px;background:#fff;font-family:inherit;}
+.filter-select:focus{border-color:#40a9ff;box-shadow:0 0 0 2px rgba(24,144,255,.2);}
+.select-wrap{position:relative;display:inline-flex;align-items:center;}
+.select-wrap svg{position:absolute;right:8px;pointer-events:none;color:#bfbfbf;}
+.table-wrap{background:#fff;border-radius:4px;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:800px;}
+thead th{background:#fafafa;padding:12px 16px;text-align:left;font-weight:600;color:rgba(0,0,0,.85);border-bottom:1px solid #f0f0f0;white-space:nowrap;font-size:13px;}
+tbody tr{border-bottom:1px solid #f0f0f0;transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}tbody tr:hover{background:#e6f7ff !important;}tbody tr:nth-child(even){background:#fafafa;}
+tbody td{padding:12px 16px;color:rgba(0,0,0,.65);vertical-align:middle;}
+.td-id{font-family:monospace;font-size:12px;color:rgba(0,0,0,.45);white-space:nowrap;}
+.td-title{max-width:180px;font-weight:500;color:rgba(0,0,0,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-ops{display:flex;gap:4px;align-items:center;white-space:nowrap;}
+.badge{display:inline-flex;align-items:center;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap;}
+.badge-red{background:#fff1f0;color:#f5222d;border:1px solid #ffa39e;}
+.badge-orange{background:#fff7e6;color:#fa8c16;border:1px solid #ffd591;}
+.badge-blue{background:#e6f7ff;color:#1890ff;border:1px solid #91d5ff;}
+.badge-green{background:#f6ffed;color:#52c41a;border:1px solid #b7eb8f;}
+.badge-gray{background:#fafafa;color:rgba(0,0,0,.45);border:1px solid #d9d9d9;}
+.badge-cyan{background:#e6fffb;color:#13c2c2;border:1px solid #87e8de;}
+.empty{text-align:center;padding:48px 0;color:rgba(0,0,0,.25);}
+.iter-list-section{background:#fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,21,41,.08);overflow:hidden;margin-top:24px;}
+.iter-list-header{padding:12px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .15s;}
+.iter-list-header:hover{background:#fafafa;}
+.iter-list-title{font-size:14px;font-weight:600;color:rgba(0,0,0,.85);}
+.iter-list-body{border-top:1px solid #f0f0f0;}
+.progress-wrap{display:flex;align-items:center;gap:8px;}
+.progress-bar{flex:1;background:#f5f5f5;border-radius:100px;height:6px;overflow:hidden;min-width:60px;}
+.progress-fill{height:100%;border-radius:100px;transition:width .3s;}
+.progress-pct{font-size:12px;color:rgba(0,0,0,.65);min-width:32px;text-align:right;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:4px;box-shadow:0 3px 6px -4px rgba(0,0,0,.12),0 6px 16px rgba(0,0,0,.08);width:100%;margin:auto;display:flex;flex-direction:column;max-height:calc(100vh - 48px);overflow:hidden;}
+.modal-sm{max-width:480px;}.modal-md{max-width:640px;}.modal-lg{max-width:860px;}
+.modal-header{padding:16px 24px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-title{font-size:16px;font-weight:600;color:rgba(0,0,0,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100% - 40px);}
+.modal-close{width:32px;height:32px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,.45);border-radius:4px;font-size:18px;flex-shrink:0;}
+.modal-close:hover{background:rgba(0,0,0,.06);color:rgba(0,0,0,.85);}
+.modal-body{padding:24px;overflow-y:auto;flex:1;}
+.modal-footer{padding:12px 24px;border-top:1px solid #f0f0f0;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0;}
+.form-item{margin-bottom:18px;}
+.form-label{display:block;margin-bottom:6px;font-size:13px;color:rgba(0,0,0,.65);}
+.req{color:#f5222d;margin-left:2px;}
+.form-input,.form-textarea{width:100%;height:32px;border:1px solid #d9d9d9;border-radius:4px;padding:4px 11px;font-size:14px;outline:none;transition:all .2s;color:rgba(0,0,0,.85);background:#fff;font-family:inherit;}
+.form-textarea{height:auto;min-height:80px;resize:vertical;padding:6px 11px;}
+.form-input:focus,.form-textarea:focus{border-color:#40a9ff;box-shadow:0 0 0 2px rgba(24,144,255,.2);}
+.form-error{color:#f5222d;font-size:12px;margin-top:4px;display:none;}
+.form-error.show{display:block;}
+.detail-section{margin-bottom:20px;}
+.detail-section-title{font-size:14px;font-weight:600;color:rgba(0,0,0,.85);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.info-item{display:flex;flex-direction:column;gap:4px;}
+.info-item label{font-size:12px;color:rgba(0,0,0,.45);}
+.rich-readonly{border:1px solid #f0f0f0;border-radius:4px;padding:8px 12px;background:#fafafa;min-height:60px;font-size:14px;line-height:1.6;color:rgba(0,0,0,.65);}
+.rich-readonly p{margin:2px 0;}
+.timeline{padding:4px 0;}
+.tl-item{display:flex;gap:12px;padding-bottom:20px;position:relative;}
+.tl-item::before{content:"";position:absolute;left:7px;top:16px;bottom:0;width:1px;background:#e8e8e8;}
+.tl-item:last-child::before{display:none;}
+.tl-dot{width:15px;height:15px;border-radius:50%;background:#1890ff;border:2px solid #fff;box-shadow:0 0 0 2px #1890ff;flex-shrink:0;margin-top:3px;}
+.tl-title{font-weight:600;font-size:13px;color:rgba(0,0,0,.85);}
+.tl-sub{font-size:12px;color:rgba(0,0,0,.45);margin-top:2px;}
+.comment-item{padding:8px 0;border-bottom:1px solid #f0f0f0;}
+.comment-item:last-child{border-bottom:none;}
+.comment-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.comment-author{font-weight:600;font-size:13px;color:rgba(0,0,0,.85);}
+.comment-time{font-size:12px;color:rgba(0,0,0,.35);}
+.comment-text{font-size:13px;color:rgba(0,0,0,.65);line-height:1.6;word-break:break-all;}
+.comment-empty{text-align:center;color:rgba(0,0,0,.25);padding:20px 0;font-size:13px;}
+.assign-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;}
+.assign-row:last-child{border-bottom:none;}
+.export-field-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0;}
+.export-field-row:last-child{border-bottom:none;}
+.alert-info{background:#e6f7ff;border:1px solid #91d5ff;color:#1890ff;padding:8px 12px;border-radius:4px;font-size:13px;}
+.manual-preview{width:100%;min-height:320px;border:1px solid #d9d9d9;border-radius:4px;padding:12px;font-size:13px;line-height:1.8;font-family:"Courier New",monospace;background:#fafafa;color:rgba(0,0,0,.75);resize:vertical;outline:none;}
+#toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:8px 16px;border-radius:4px;font-size:14px;z-index:9999;white-space:nowrap;pointer-events:none;}
+@media(max-width:1200px){.stats{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:900px){.content-layout{flex-direction:column;}.tree-panel{width:100%;}}
+@media(max-width:600px){.stats{grid-template-columns:1fr;}.toolbar{flex-direction:column;align-items:flex-start;}}
+</style></head><body>
+<div id="toast"></div>
+<nav class="nav"><div class="nav-logo">DPS <span>需求管理平台</span></div>
+<div class="nav-links">
+<a class="nav-link" href="requirements.html">需求管理</a>
+<a class="nav-link" href="products.html">产品管理</a>
+<a class="nav-link active" href="iterations.html">迭代管理</a>
+</div></nav>
+<div class="main">
+<div class="toolbar">
+<div style="display:flex;align-items:center;gap:10px;flex:1;">
+<div class="select-wrap"><select id="iterationSelector" class="filter-select" onchange="onIterationChange()" style="min-width:140px;font-weight:600;"></select>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>
+<span id="dateRangeDisplay" style="color:rgba(0,0,0,.45);font-size:13px;"></span>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+<button class="btn btn-default" onclick="openConfirmOnlineModal()">确认上线</button>
+<button class="btn btn-green" onclick="openGenerateManualModal()">生成手册</button>
+<button class="btn btn-primary" onclick="openExportModal()">导出需求</button>
+<button class="btn btn-default" onclick="openNewIterModal(null)">+ 新建迭代</button>
+<button class="btn btn-default" onclick="openAssignModal()">分配需求</button>
+</div></div>
+<div class="stats">
+<div class="stat-card"><div class="stat-icon blue">&#x1F4CB;</div><div><div class="stat-label">当前迭代需求总数</div><div class="stat-value" id="stat-total">0</div></div></div>
+<div class="stat-card"><div class="stat-icon orange">&#x2B50;</div><div><div class="stat-label">迭代重点需求数</div><div class="stat-value" id="stat-priority">0</div></div></div>
+<div class="stat-card"><div class="stat-icon green">&#x2705;</div><div><div class="stat-label">已完成需求数</div><div class="stat-value" id="stat-done">0</div></div></div>
+<div class="stat-card"><div class="stat-icon purple">&#x1F4CA;</div><div><div class="stat-label">平均评审得分</div><div class="stat-value" id="stat-score">-</div></div></div>
+</div>
+<div class="content-layout">
+<div class="tree-panel">
+<div class="tree-panel-header"><span class="tree-panel-title">产品结构</span></div>
+<div class="tree-container" id="productTree"></div>
+</div>
+<div class="req-panel">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+<div class="search-wrap" style="flex:1;min-width:180px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" id="reqSearch" class="search-input" placeholder="搜索标题/ID" oninput="onFilterChange()"></div>
+<div class="select-wrap"><select id="priorityFilter" class="filter-select" onchange="onFilterChange()"><option value="">全部优先级</option><option>最高</option><option>紧急</option><option>较高</option><option>普通</option><option>较低</option></select><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>
+<div class="select-wrap"><select id="statusFilter" class="filter-select" onchange="onFilterChange()"><option value="">全部状态</option><option>待评审</option><option>待开发</option><option>开发中</option><option>已完成</option><option>未通过</option></select><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>
+</div>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>需求标题</th><th>客户</th><th>需求优先级</th><th>创建人</th><th style="min-width:120px;">客户实现方案</th><th>状态</th><th>得分</th><th>操作</th></tr></thead><tbody id="reqTbody"></tbody></table><div id="reqEmpty" class="empty" style="display:none;">暂无需求</div></div>
+</div></div>
+<div class="iter-list-section"><div class="iter-list-header" onclick="toggleIterList()"><span class="iter-list-title">迭代列表</span><span id="iterListToggleIcon" style="font-size:12px;color:rgba(0,0,0,.45);">&#x25BC;</span></div>
+<div class="iter-list-body" id="iterListBody"><div class="table-wrap"><table><thead><tr><th>迭代名称</th><th>周期</th><th>状态</th><th>需求数</th><th style="min-width:140px;">完成率</th><th>操作</th></tr></thead><tbody id="iterTbody"></tbody></table><div id="iterEmpty" class="empty" style="display:none;">暂无迭代</div></div></div>
+</div></div>
+<div class="modal-overlay" id="newIterOverlay"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="newIterTitle">新建迭代</span><button class="modal-close" onclick="closeModal('newIterOverlay')">x</button></div><div class="modal-body"><div class="form-item"><label class="form-label">迭代名称<span class="req">*</span></label><input type="text" id="iterName" class="form-input" placeholder="如：Sprint 8"><div class="form-error" id="iterNameError">请输入迭代名称</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div class="form-item"><label class="form-label">开始日期<span class="req">*</span></label><input type="date" id="iterStart" class="form-input"><div class="form-error" id="iterStartError">请选择开始日期</div></div><div class="form-item"><label class="form-label">结束日期<span class="req">*</span></label><input type="date" id="iterEnd" class="form-input"><div class="form-error" id="iterEndError">请选择结束日期</div></div></div><div class="form-item"><label class="form-label">描述</label><textarea id="iterDesc" class="form-textarea" placeholder="迭代目标描述"></textarea></div></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('newIterOverlay')">取消</button><button class="btn btn-primary" onclick="saveIteration()">确认</button></div></div></div>
+<div class="modal-overlay" id="assignOverlay"><div class="modal modal-md"><div class="modal-header"><span class="modal-title" id="assignModalTitle">分配需求</span><button class="modal-close" onclick="closeModal('assignOverlay')">x</button></div><div class="modal-body"><div class="alert-info" style="margin-bottom:16px;">只显示状态为&quot;待开发&quot;且未分配到此迭代的需求</div><div style="border:1px solid #f0f0f0;border-radius:4px;overflow:hidden;"><div style="background:#fafafa;padding:8px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="assignSelectAll" onchange="toggleAssignSelectAll()" style="accent-color:#1890ff;"><span style="flex:1;font-size:13px;font-weight:600;color:rgba(0,0,0,.65);">需求标题</span><span style="width:80px;font-size:13px;font-weight:600;color:rgba(0,0,0,.65);">客户</span><span style="width:70px;font-size:13px;font-weight:600;color:rgba(0,0,0,.65);">优先级</span><span style="width:36px;font-size:13px;font-weight:600;color:rgba(0,0,0,.65);">得分</span></div><div id="assignList" style="max-height:320px;overflow-y:auto;padding:0 12px;"><div class="empty" id="assignEmpty" style="display:none;">暂无可分配的需求</div></div></div></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('assignOverlay')">取消</button><button class="btn btn-primary" onclick="confirmAssign()">确认分配</button></div></div></div>
+<div class="modal-overlay" id="exportOverlay"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title" id="exportModalTitle">导出需求</span><button class="modal-close" onclick="closeModal('exportOverlay')">x</button></div><div class="modal-body"><div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-default btn-sm" onclick="selectAllExportFields()">全选</button><button class="btn btn-default btn-sm" onclick="deselectAllExportFields()">取消全选</button><button class="btn btn-default btn-sm" onclick="resetExportOrder()">重置顺序</button></div><div id="exportFieldsList" style="border:1px solid #f0f0f0;border-radius:4px;padding:0 12px;"></div></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('exportOverlay')">取消</button><button class="btn btn-primary" onclick="exportCSV()">导出 CSV</button></div></div></div>
+<div class="modal-overlay" id="manualOverlay"><div class="modal modal-lg"><div class="modal-header"><span class="modal-title" id="manualModalTitle">生成需求说明文档</span><button class="modal-close" onclick="closeModal('manualOverlay')">x</button></div><div class="modal-body"><textarea id="manualPreview" class="manual-preview" readonly></textarea></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('manualOverlay')">关闭</button><button class="btn btn-primary" onclick="downloadManual()">下载文档</button></div></div></div>
+<div class="modal-overlay" id="detailOverlay"><div class="modal modal-lg"><div class="modal-header"><span class="modal-title" id="detailModalTitle">需求详情</span><button class="modal-close" onclick="closeModal('detailOverlay')">x</button></div><div class="modal-body"><div class="detail-section"><div class="detail-section-title">基本信息</div><div style="font-size:16px;font-weight:600;color:rgba(0,0,0,.85);margin-bottom:16px;" id="detailTitle"></div><div class="info-grid"><div class="info-item"><label>客户</label><div id="detailCustomer"></div></div><div class="info-item"><label>需求优先级</label><div id="detailPriority"></div></div><div class="info-item"><label>状态</label><div id="detailStatus"></div></div><div class="info-item"><label>创建人</label><div id="detailCreator"></div></div><div class="info-item"><label>评审得分</label><div id="detailScore"></div></div><div class="info-item"><label>评审结果</label><div id="detailReviewResult"></div></div></div></div><div class="detail-section"><div class="detail-section-title">用户故事</div><div class="rich-readonly" id="detailUserStory"></div></div><div class="detail-section"><div class="detail-section-title">客户实现方案</div><div class="rich-readonly" id="detailSolution"></div></div><div class="detail-section"><div class="detail-section-title">迭代历史</div><div id="detailIterHistory"></div></div><div class="detail-section"><div class="detail-section-title">评论 <span style="font-size:12px;color:rgba(0,0,0,.35);font-weight:400;">（只读）</span></div><div id="detailComments"></div></div></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('detailOverlay')">关闭</button></div></div></div>
+<div class="modal-overlay" id="onlineOverlay"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">确认上线</span><button class="modal-close" onclick="closeModal('onlineOverlay')">x</button></div><div class="modal-body"><p id="onlineConfirmText" style="font-size:14px;color:rgba(0,0,0,.65);"></p></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('onlineOverlay')">取消</button><button class="btn btn-primary" onclick="executeOnline()">确认</button></div></div></div>
+<div class="modal-overlay" id="removeOverlay"><div class="modal modal-sm"><div class="modal-header"><span class="modal-title">移出迭代</span><button class="modal-close" onclick="closeModal('removeOverlay')">x</button></div><div class="modal-body"><p style="font-size:14px;color:rgba(0,0,0,.65);">确认将此需求移出当前迭代？</p><p style="font-size:13px;color:rgba(0,0,0,.45);margin-top:8px;">若该需求不再属于任何进行中的迭代，其状态将恢复为待开发。</p></div><div class="modal-footer"><button class="btn btn-default" onclick="closeModal('removeOverlay')">取消</button><button class="btn btn-primary" onclick="executeRemove()">确认移出</button></div></div></div>

@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPS 产品管理平台</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 22px; color: rgba(0,0,0,.85); background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* NAV */
+.nav { background: #001529; height: 48px; display: flex; align-items: center; padding: 0 24px; flex-shrink: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.nav-logo { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: .5px; white-space: nowrap; margin-right: 40px; }
+.nav-logo span { color: #1890ff; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link { color: rgba(255,255,255,.65); padding: 0 16px; height: 48px; display: flex; align-items: center; cursor: pointer; transition: all .2s; font-size: 14px; text-decoration: none; border-bottom: 2px solid transparent; }
+.nav-link:hover { color: #fff; }
+.nav-link.active { color: #fff; border-bottom-color: #1890ff; }
+
+/* LAYOUT */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* LEFT PANEL */
+.left-panel { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #f0f0f0; display: flex; flex-direction: column; overflow: hidden; }
+.left-toolbar { padding: 12px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tree-container { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+/* TREE */
+.tree-node { user-select: none; }
+.tree-row { display: flex; align-items: center; height: 36px; padding: 0 8px; cursor: pointer; position: relative; transition: background .15s; border-left: 3px solid transparent; }
+.tree-row:hover { background: #f5f5f5; }
+.tree-row.selected { background: #e6f7ff; border-left-color: #1890ff; }
+.tree-row .toggle { width: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,.45); transition: transform .2s; }
+.tree-row .toggle.collapsed { transform: rotate(-90deg); }
+.tree-row .toggle svg { width: 12px; height: 12px; }
+.tree-row .toggle-placeholder { width: 20px; flex-shrink: 0; }
+.tree-row .node-icon { margin-right: 6px; flex-shrink: 0; display: flex; align-items: center; }
+.tree-row .node-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.tree-row .node-count { font-size: 12px; color: rgba(0,0,0,.35); margin-left: 4px; flex-shrink: 0; }
+.tree-row .node-actions { display: none; align-items: center; gap: 2px; margin-left: 4px; flex-shrink: 0; }
+.tree-row:hover .node-actions { display: flex; }
+.tree-row .node-actions button { background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 3px; color: rgba(0,0,0,.45); font-size: 13px; line-height: 1; transition: all .15s; display: flex; align-items: center; }
+.tree-row .node-actions button:hover { background: #e6f7ff; color: #1890ff; }
+.tree-row .node-actions button.danger:hover { background: #fff1f0; color: #f5222d; }
+
+.tree-children { overflow: hidden; transition: max-height .25s ease; }
+.tree-children.collapsed { max-height: 0 !important; }
+
+/* indent levels */
+.indent-1 { padding-left: 16px; }
+.indent-2 { padding-left: 36px; }
+
+/* RIGHT PANEL */
+.right-panel { flex: 1; overflow-y: auto; padding: 24px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: rgba(0,0,0,.25); gap: 12px; }
+.empty-state svg { width: 64px; height: 64px; opacity: .3; }
+
+/* DETAIL CARD */
+.detail-card { background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,21,41,.08); }
+.detail-header { padding: 16px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.detail-title { font-size: 18px; font-weight: 600; color: rgba(0,0,0,.85); }
+.detail-actions { display: flex; gap: 8px; margin-left: auto; }
+.detail-body { padding: 20px 24px; }
+
+/* INFO GRID */
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 24px; }
+.info-item { }
+.info-label { font-size: 12px; color: rgba(0,0,0,.45); margin-bottom: 4px; }
+.info-value { font-size: 14px; color: rgba(0,0,0,.85); word-break: break-all; }
+.info-item.full { grid-column: 1 / -1; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.badge-blue   { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+.badge-green  { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+.badge-orange { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
+.badge-gray   { background: #fafafa; color: rgba(0,0,0,.45); border: 1px solid #d9d9d9; }
+.badge-cyan   { background: #e6fffb; color: #13c2c2; border: 1px solid #87e8de; }
+.badge-red    { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+.badge-purple { background: #f9f0ff; color: #722ed1; border: 1px solid #d3adf7; }
+
+/* VERSION BADGE */
+.version-badge { background: #f0f5ff; color: #2f54eb; border: 1px solid #adc6ff; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 15px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; font-size: 14px; line-height: 22px; transition: all .2s; white-space: nowrap; outline: none; font-family: inherit; }
+.btn-primary { background: #1890ff; border-color: #1890ff; color: #fff; }
+.btn-primary:hover { background: #40a9ff; border-color: #40a9ff; }
+.btn-default { background: #fff; border-color: #d9d9d9; color: rgba(0,0,0,.65); }
+.btn-default:hover { border-color: #40a9ff; color: #40a9ff; }
+.btn-danger  { background: #ff4d4f; border-color: #ff4d4f; color: #fff; }
+.btn-danger:hover { background: #ff7875; border-color: #ff7875; }
+.btn-sm { padding: 3px 10px; font-size: 13px; }
+
+/* TABS */
+.tabs { margin-top: 20px; }
+.tab-bar { display: flex; border-bottom: 1px solid #f0f0f0; margin-bottom: 0; }
+.tab-item { padding: 8px 16px; cursor: pointer; font-size: 14px; color: rgba(0,0,0,.65); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .2s; }
+.tab-item.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: 500; }
+.tab-content { padding: 16px 0 0; }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; border: 1px solid #f0f0f0; border-radius: 4px; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #fafafa; padding: 10px 14px; text-align: left; font-weight: 600; color: rgba(0,0,0,.85); border-bottom: 1px solid #f0f0f0; white-space: nowrap; font-size: 13px; }
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #e6f7ff; }
+tbody td { padding: 10px 14px; color: rgba(0,0,0,.65); vertical-align: middle; font-size: 13px; }
+.td-id { font-family: monospace; font-size: 12px; color: rgba(0,0,0,.45); }
+
+/* SELECT */
+.filter-select { height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 28px 4px 11px; font-size: 14px; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer; background: #fff; font-family: inherit; min-width: 110px; }
+.filter-select:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.select-wrap { position: relative; display: inline-flex; align-items: center; }
+.select-wrap svg { position: absolute; right: 8px; pointer-events: none; color: #bfbfbf; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 4px; box-shadow: 0 6px 16px rgba(0,0,0,.12); width: 480px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; }
+.modal-header { padding: 16px 24px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-close { background: none; border: none; cursor: pointer; color: rgba(0,0,0,.45); padding: 4px; border-radius: 4px; display: flex; align-items: center; }
+.modal-close:hover { color: rgba(0,0,0,.85); background: #f5f5f5; }
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.modal-footer { padding: 12px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+/* FORM */
+.form-item { margin-bottom: 16px; }
+.form-label { display: block; font-size: 14px; color: rgba(0,0,0,.85); margin-bottom: 6px; }
+.form-label .req { color: #f5222d; margin-left: 4px; }
+.form-input { width: 100%; height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 11px; font-size: 14px; outline: none; font-family: inherit; transition: all .2s; background: #fff; }
+.form-input:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.form-input[readonly] { background: #f5f5f5; cursor: default; color: rgba(0,0,0,.45); }
+.form-textarea { width: 100%; border: 1px solid #d9d9d9; border-radius: 4px; padding: 6px 11px; font-size: 14px; outline: none; font-family: inherit; resize: vertical; min-height: 72px; transition: all .2s; }
+.form-textarea:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.form-select { width: 100%; height: 32px; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px 11px; font-size: 14px; outline: none; font-family: inherit; background: #fff; cursor: pointer; }
+.form-select:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.2); }
+.form-error { font-size: 12px; color: #f5222d; margin-top: 4px; display: none; }
+.form-error.show { display: block; }
+.form-input.error, .form-textarea.error { border-color: #f5222d; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(0,0,0,.75); color: #fff; padding: 8px 20px; border-radius: 4px; font-size: 14px; opacity: 0; transition: all .3s; pointer-events: none; z-index: 9999; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* EMPTY */
+.empty-table { text-align: center; padding: 32px 0; color: rgba(0,0,0,.25); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">DPS <span>需求管理平台</span></div>
+  <div class="nav-links">
+    <a class="nav-link" href="requirements.html">需求管理</a>
+    <a class="nav-link active" href="products.html">产品管理</a>
+    <a class="nav-link" href="iterations.html">迭代管理</a>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="left-toolbar">
+      <button class="btn btn-primary btn-sm" onclick="openProductModal(null)" style="flex-shrink:0">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        新建产品
+      </button>
+      <div class="select-wrap" style="flex:1">
+        <select class="filter-select" id="versionFilter" onchange="applyVersionFilter()" style="width:100%">
+          <option value="">全部版本</option>
+        </select>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="#bfbfbf" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="tree-container" id="treeContainer"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="rightPanel">
+    <div class="empty-state">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="8" width="48" height="48" rx="4" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 20h48" stroke="currentColor" stroke-width="2"/>
+        <rect x="16" y="28" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M34 30h14M34 36h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="16" y="44" width="32" height="4" rx="2" fill="currentColor" opacity=".2"/>
+      </svg>
+      <div>从左侧选择节点查看详情</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="productOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="productModalTitle">新建产品</span>
+      <button class="modal-close" onclick="closeModal('productOverlay')">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item">
+        <label class="form-label">产品名称<span class="req">*</span></label>
+        <input class="form-input" id="pName" placeholder="请输入产品名称">
+        <div class="form-error" id="pNameErr">请输入产品名称</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">版本号</label>
+        <input class="form-input" id="pVersion" placeholder="v2.1.3">
+      </div>
+      <div class="form-item">
+        <label class="form-label">负责人</label>
+        <input class="form-input" id="pOwner" placeholder="请输入负责人">
+      </div>
+      <div class="form-item">
+        <label class="form-label">描述</label>
+        <textarea class="form-textarea" id="pDesc" placeholder="请输入产品描述"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('productOverlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveProduct()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURE MODAL -->
+<div class="modal-overlay" id="featureOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="featureModalTitle">新建特性</span>
+      <button class="modal-close" onclick="closeModal('featureOverlay')">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item">
+        <label class="form-label">特性名称<span class="req">*</span></label>
+        <input class="form-input" id="fName" placeholder="请输入特性名称">
+        <div class="form-error" id="fNameErr">请输入特性名称</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">所属产品</label>
+        <input class="form-input" id="fProduct" readonly>
+      </div>
+      <div class="form-item">
+        <label class="form-label">版本号</label>
+        <input class="form-input" id="fVersion" placeholder="v2.1.3">
+      </div>
+      <div class="form-item">
+        <label class="form-label">负责人</label>
+        <input class="form-input" id="fOwner" placeholder="请输入负责人">
+      </div>
+      <div class="form-item">
+        <label class="form-label">状态</label>
+        <select class="form-select" id="fStatus">
+          <option value="规划中">规划中</option>
+          <option value="开发中">开发中</option>
+          <option value="已发布">已发布</option>
+        </select>
+      </div>
+      <div class="form-item">
+        <label class="form-label">描述</label>
+        <textarea class="form-textarea" id="fDesc" placeholder="请输入特性描述"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('featureOverlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveFeature()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- FUNCTION MODAL -->
+<div class="modal-overlay" id="functionOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="functionModalTitle">新建功能</span>
+      <button class="modal-close" onclick="closeModal('functionOverlay')">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-item">
+        <label class="form-label">功能名称<span class="req">*</span></label>
+        <input class="form-input" id="fnName" placeholder="请输入功能名称">
+        <div class="form-error" id="fnNameErr">请输入功能名称</div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">所属产品</label>
+        <input class="form-input" id="fnProduct" readonly>
+      </div>
+      <div class="form-item">
+        <label class="form-label">所属特性</label>
+        <input class="form-input" id="fnFeature" readonly>
+      </div>
+      <div class="form-item">
+        <label class="form-label">版本号</label>
+        <input class="form-input" id="fnVersion" placeholder="v2.1.3">
+      </div>
+      <div class="form-item">
+        <label class="form-label">负责人</label>
+        <input class="form-input" id="fnOwner" placeholder="请输入负责人">
+      </div>
+      <div class="form-item">
+        <label class="form-label">状态</label>
+        <select class="form-select" id="fnStatus">
+          <option value="未开始">未开始</option>
+          <option value="开发中">开发中</option>
+          <option value="已完成">已完成</option>
+        </select>
+      </div>
+      <div class="form-item">
+        <label class="form-label">描述</label>
+        <textarea class="form-textarea" id="fnDesc" placeholder="请输入功能描述"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('functionOverlay')">取消</button>
+      <button class="btn btn-primary" onclick="saveFunction()">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteOverlay">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <span class="modal-title">删除确认</span>
+      <button class="modal-close" onclick="closeModal('deleteOverlay')">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteMsg" style="color:rgba(0,0,0,.65);line-height:1.6"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('deleteOverlay')">取消</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">确定删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastEl"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+var LS_KEY = 'dps_products';
+var LS_REQ = 'dps_requirements';
+
+var products = [];
+var expandedNodes = {};   // key = node id, value = bool
+var selectedNode = null;  // { type: 'product'|'feature'|'function', productId, featureId, funcId }
+var versionFilter = '';
+
+// modal editing state
+var editingProductId = null;
+var editingFeatureCtx = null;   // { productId, featureId }
+var editingFunctionCtx = null;  // { productId, featureId, funcId }
+var deletePending = null;       // { type, productId, featureId, funcId }
+
+var toastTimer = null;
+var productCounter = 0;
+var featureCounter = 0;
+var functionCounter = 0;
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  var raw = localStorage.getItem(LS_KEY);
+  if (raw) {
+    try { products = JSON.parse(raw); } catch(e) { products = []; }
+  }
+  if (!products || products.length === 0) {
+    products = getSampleData();
+    save();
+  }
+  // compute counters from existing IDs
+  products.forEach(function(p) {
+    var m = p.id.match(/DPS-(\d+)/);
+    if (m) productCounter = Math.max(productCounter, parseInt(m[1], 10));
+    (p.features || []).forEach(function(f) {
+      var mf = f.id.match(/feat-(\d+)/);
+      if (mf) featureCounter = Math.max(featureCounter, parseInt(mf[1], 10));
+      (f.functions || []).forEach(function(fn) {
+        var mfn = fn.id.match(/func-(\d+)/);
+        if (mfn) functionCounter = Math.max(functionCounter, parseInt(mfn[1], 10));
+      });
+    });
+  });
+  // default expand all products
+  products.forEach(function(p) {
+    expandedNodes[p.id] = true;
+  });
+  render();
+}
+
+function save() {
+  localStorage.setItem(LS_KEY, JSON.stringify(products));
+}
+
+function getSampleData() {
+  return [
+    {
+      id: 'DPS-001',
+      name: 'DPS 平台',
+      version: 'v2.1.3',
+      owner: '张三',
+      description: '企业级需求管理平台，支持产品、迭代、需求全生命周期管理。',
+      features: [
+        {
+          id: 'feat-001',
+          name: '用户管理',
+          version: 'v2.1.3',
+          owner: '李四',
+          status: '开发中',
+          description: '用户账号管理，包含批量导入和权限设置等功能。',
+          functions: [
+            { id: 'func-001', name: '批量导入', version: 'v2.1.3', owner: '王五', status: '未开始', description: '支持 Excel/CSV 批量导入用户数据。' },
+            { id: 'func-002', name: '权限设置', version: 'v2.1.3', owner: '王五', status: '开发中', description: '基于角色的权限控制，支持细粒度授权。' }
+          ]
+        },
+        {
+          id: 'feat-002',
+          name: '前端 UI',
+          version: 'v2.1.3',
+          owner: '赵六',
+          status: '规划中',
+          description: '统一的前端 UI 组件库与主题系统。',
+          functions: [
+            { id: 'func-003', name: '主题配置', version: 'v2.1.3', owner: '赵六', status: '未开始', description: '支持深色/浅色主题及自定义主题色配置。' }
+          ]
+        },
+        {
+          id: 'feat-003',
+          name: '数据看板',
+          version: 'v2.1.3',
+          owner: '孙七',
+          status: '已发布',
+          description: '可视化数据统计看板，展示需求、迭代各维度指标。',
+          functions: [
+            { id: 'func-004', name: '需求统计图', version: 'v2.1.3', owner: '孙七', status: '已完成', description: '饼图/折线图展示需求状态分布与趋势。' },
+            { id: 'func-005', name: '导出报告', version: 'v2.1.3', owner: '孙七', status: '已完成', description: '支持将看板数据导出为 PDF/Excel 报告。' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'DPS-002',
+      name: '移动端 App',
+      version: 'v1.0.0',
+      owner: '周八',
+      description: '面向移动端用户的轻量级需求跟踪 App，支持 iOS/Android。',
+      features: [
+        {
+          id: 'feat-004',
+          name: '消息通知',
+          version: 'v1.0.0',
+          owner: '吴九',
+          status: '开发中',
+          description: '推送通知与站内消息中心。',
+          functions: [
+            { id: 'func-006', name: '推送配置', version: 'v1.0.0', owner: '吴九', status: '开发中', description: '支持自定义通知类型与接收频率设置。' }
+          ]
+        },
+        {
+          id: 'feat-005',
+          name: '离线模式',
+          version: 'v1.0.0',
+          owner: '郑十',
+          status: '规划中',
+          description: '支持离线查看需求列表，网络恢复后自动同步。',
+          functions: [
+            { id: 'func-007', name: '本地缓存', version: 'v1.0.0', owner: '郑十', status: '未开始', description: '使用本地数据库缓存近期需求数据。' },
+            { id: 'func-008', name: '冲突解决', version: 'v1.0.0', owner: '郑十', status: '未开始', description: '离线编辑与服务端数据的冲突检测与合并策略。' }
+          ]
+        }
+      ]
+    }
+  ];
+}
+
+// ============================================================
+// ID GENERATION
+// ============================================================
+function nextProductId() {
+  productCounter++;
+  return 'DPS-' + String(productCounter).padStart(3, '0');
+}
+function nextFeatureId() {
+  featureCounter++;
+  return 'feat-' + String(featureCounter).padStart(3, '0');
+}
+function nextFunctionId() {
+  functionCounter++;
+  return 'func-' + String(functionCounter).padStart(3, '0');
+}
+
+// ============================================================
+// FIND HELPERS
+// ============================================================
+function findProduct(pid) {
+  for (var i = 0; i < products.length; i++) {
+    if (products[i].id === pid) return products[i];
+  }
+  return null;
+}
+function findFeature(pid, fid) {
+  var p = findProduct(pid);
+  if (!p) return null;
+  for (var i = 0; i < p.features.length; i++) {
+    if (p.features[i].id === fid) return p.features[i];
+  }
+  return null;
+}
+function findFunction(pid, fid, fnid) {
+  var f = findFeature(pid, fid);
+  if (!f) return null;
+  for (var i = 0; i < f.functions.length; i++) {
+    if (f.functions[i].id === fnid) return f.functions[i];
+  }
+  return null;
+}
+function countTotalFunctions(product) {
+  var total = 0;
+  (product.features || []).forEach(function(f) { total += (f.functions || []).length; });
+  return total;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  renderVersionFilter();
+  renderTree();
+  renderDetail();
+}
+
+function renderVersionFilter() {
+  var sel = document.getElementById('versionFilter');
+  var cur = versionFilter;
+  var versions = {};
+  products.forEach(function(p) { if (p.version) versions[p.version] = true; });
+  var opts = '<option value="">全部版本</option>';
+  Object.keys(versions).sort().forEach(function(v) {
+    opts += '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(v) + '</option>';
+  });
+  sel.innerHTML = opts;
+  sel.value = cur;
+}
+
+function applyVersionFilter() {
+  versionFilter = document.getElementById('versionFilter').value;
+  renderTree();
+}
+
+function renderTree() {
+  var container = document.getElementById('treeContainer');
+  var filtered = versionFilter
+    ? products.filter(function(p) { return p.version === versionFilter; })
+    : products;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:32px 16px;color:rgba(0,0,0,.25);font-size:13px">暂无产品数据</div>';
+    return;
+  }
+
+  var html = '';
+  filtered.forEach(function(p) {
+    var totalFuncs = countTotalFunctions(p);
+    var totalCount = (p.features || []).length + totalFuncs;
+    var isExpanded = expandedNodes[p.id] !== false;
+    var isSelected = selectedNode && selectedNode.type === 'product' && selectedNode.productId === p.id;
+
+    html += '<div class="tree-node" id="node-' + p.id + '">';
+    // product row
+    html += '<div class="tree-row' + (isSelected ? ' selected' : '') + '" onclick="selectNode(\'product\',\'' + p.id + '\',null,null)">';
+    html += '<span class="toggle' + (isExpanded ? '' : ' collapsed') + '" onclick="toggleExpand(event,\'' + p.id + '\')">';
+    html += '<svg viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    html += '</span>';
+    html += '<span class="node-icon">' + iconBox() + '</span>';
+    html += '<span class="node-label">' + esc(p.name) + '</span>';
+    if (totalCount > 0) html += '<span class="node-count">(' + totalCount + ')</span>';
+    html += '<span class="node-actions">';
+    html += '<button title="编辑" onclick="evt(event);openProductModal(\'' + p.id + '\')">' + iconEdit() + '</button>';
+    html += '<button title="添加特性" onclick="evt(event);openFeatureModal(\'' + p.id + '\',null)">' + iconPlus() + '</button>';
+    html += '<button class="danger" title="删除" onclick="evt(event);askDelete(\'product\',\'' + p.id + '\',null,null)">' + iconDelete() + '</button>';
+    html += '</span>';
+    html += '</div>'; // tree-row
+
+    // features
+    var featuresHtml = '';
+    (p.features || []).forEach(function(f) {
+      var fExpanded = expandedNodes[f.id] !== false;
+      var fSelected = selectedNode && selectedNode.type === 'feature' && selectedNode.productId === p.id && selectedNode.featureId === f.id;
+
+      featuresHtml += '<div class="tree-node" id="node-' + f.id + '">';
+      featuresHtml += '<div class="tree-row indent-1' + (fSelected ? ' selected' : '') + '" onclick="selectNode(\'feature\',\'' + p.id + '\',\'' + f.id + '\',null)">';
+      if (f.functions && f.functions.length > 0) {
+        featuresHtml += '<span class="toggle' + (fExpanded ? '' : ' collapsed') + '" onclick="toggleExpand(event,\'' + f.id + '\')">';
+        featuresHtml += '<svg viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        featuresHtml += '</span>';
+      } else {
+        featuresHtml += '<span class="toggle-placeholder"></span>';
+      }
+      featuresHtml += '<span class="node-icon">' + iconStar() + '</span>';
+      featuresHtml += '<span class="node-label">' + esc(f.name) + '</span>';
+      featuresHtml += '<span class="node-actions">';
+      featuresHtml += '<button title="编辑" onclick="evt(event);openFeatureModal(\'' + p.id + '\',\'' + f.id + '\')">' + iconEdit() + '</button>';
+      featuresHtml += '<button title="添加功能" onclick="evt(event);openFunctionModal(\'' + p.id + '\',\'' + f.id + '\',null)">' + iconPlus() + '</button>';
+      featuresHtml += '<button class="danger" title="删除" onclick="evt(event);askDelete(\'feature\',\'' + p.id + '\',\'' + f.id + '\',null)">' + iconDelete() + '</button>';
+      featuresHtml += '</span>';
+      featuresHtml += '</div>'; // tree-row
+
+      // functions
+      var funcsHtml = '';
+      (f.functions || []).forEach(function(fn) {
+        var fnSelected = selectedNode && selectedNode.type === 'function' && selectedNode.productId === p.id && selectedNode.featureId === f.id && selectedNode.funcId === fn.id;
+        funcsHtml += '<div class="tree-node" id="node-' + fn.id + '">';
+        funcsHtml += '<div class="tree-row indent-2' + (fnSelected ? ' selected' : '') + '" onclick="selectNode(\'function\',\'' + p.id + '\',\'' + f.id + '\',\'' + fn.id + '\')">';
+        funcsHtml += '<span class="toggle-placeholder"></span>';
+        funcsHtml += '<span class="node-icon">' + iconGear() + '</span>';
+        funcsHtml += '<span class="node-label">' + esc(fn.name) + '</span>';
+        funcsHtml += '<span class="node-actions">';
+        funcsHtml += '<button title="编辑" onclick="evt(event);openFunctionModal(\'' + p.id + '\',\'' + f.id + '\',\'' + fn.id + '\')">' + iconEdit() + '</button>';
+        funcsHtml += '<button class="danger" title="删除" onclick="evt(event);askDelete(\'function\',\'' + p.id + '\',\'' + f.id + '\',\'' + fn.id + '\')">' + iconDelete() + '</button>';
+        funcsHtml += '</span>';
+        funcsHtml += '</div></div>'; // tree-row + tree-node
+      });
+
+      var fChildrenStyle = 'max-height:' + (fExpanded ? (f.functions || []).length * 36 + 'px' : '0') + ';';
+      featuresHtml += '<div class="tree-children' + (fExpanded ? '' : ' collapsed') + '" id="children-' + f.id + '" style="' + fChildrenStyle + '">' + funcsHtml + '</div>';
+      featuresHtml += '</div>'; // tree-node (feature)
+    });
+
+    var childrenStyle = 'max-height:' + (isExpanded ? getFeatureTreeHeight(p) + 'px' : '0') + ';';
+    html += '<div class="tree-children' + (isExpanded ? '' : ' collapsed') + '" id="children-' + p.id + '" style="' + childrenStyle + '">' + featuresHtml + '</div>';
+    html += '</div>'; // tree-node (product)
+  });
+
+  container.innerHTML = html;
+}
+
+function getFeatureTreeHeight(product) {
+  var h = 0;
+  (product.features || []).forEach(function(f) {
+    h += 36; // feature row
+    if (expandedNodes[f.id] !== false) {
+      h += (f.functions || []).length * 36;
+    }
+  });
+  return h;
+}
+
+function toggleExpand(event, nodeId) {
+  event.stopPropagation();
+  expandedNodes[nodeId] = !(expandedNodes[nodeId] !== false);
+  renderTree();
+}
+
+function evt(e) { e.stopPropagation(); }
+
+function selectNode(type, productId, featureId, funcId) {
+  selectedNode = { type: type, productId: productId, featureId: featureId, funcId: funcId };
+  renderTree();
+  renderDetail();
+}
+
+// ============================================================
+// DETAIL PANEL
+// ============================================================
+function renderDetail() {
+  var panel = document.getElementById('rightPanel');
+  if (!selectedNode) {
+    panel.innerHTML = '<div class="empty-state"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="4" stroke="currentColor" stroke-width="2"/><path d="M8 20h48" stroke="currentColor" stroke-width="2"/><rect x="16" y="28" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M34 30h14M34 36h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="16" y="44" width="32" height="4" rx="2" fill="currentColor" opacity=".2"/></svg><div>从左侧选择节点查看详情</div></div>';
+    return;
+  }
+
+  if (selectedNode.type === 'product') {
+    renderProductDetail(selectedNode.productId);
+  } else if (selectedNode.type === 'feature') {
+    renderFeatureDetail(selectedNode.productId, selectedNode.featureId);
+  } else if (selectedNode.type === 'function') {
+    renderFunctionDetail(selectedNode.productId, selectedNode.featureId, selectedNode.funcId);
+  }
+}
+
+function renderProductDetail(pid) {
+  var p = findProduct(pid);
+  if (!p) return;
+  var panel = document.getElementById('rightPanel');
+  var featCount = (p.features || []).length;
+  var funcCount = countTotalFunctions(p);
+
+  // linked requirements
+  var reqs = getLinkedRequirements(pid);
+  var reqTableRows = reqs.length === 0
+    ? '<tr><td colspan="7" class="empty-table">暂无关联需求</td></tr>'
+    : reqs.map(function(r) {
+        return '<tr>' +
+          '<td class="td-id">' + esc(r.id) + '</td>' +
+          '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:rgba(0,0,0,.85)">' + esc(r.title) + '</td>' +
+          '<td>' + esc(r.customer || '') + '</td>' +
+          '<td>' + priorityBadge(r.priority) + '</td>' +
+          '<td>' + esc(r.creator || '') + '</td>' +
+          '<td>' + statusBadge(r.status) + '</td>' +
+          '<td>' + (r.score !== undefined && r.score !== null && r.score !== '' ? esc(String(r.score)) : '-') + '</td>' +
+          '</tr>';
+      }).join('');
+
+  panel.innerHTML =
+    '<div class="detail-card">' +
+      '<div class="detail-header">' +
+        '<span class="detail-title">' + esc(p.name) + '</span>' +
+        (p.version ? '<span class="version-badge">' + esc(p.version) + '</span>' : '') +
+        '<div class="detail-actions">' +
+          '<button class="btn btn-default btn-sm" onclick="openProductModal(\'' + pid + '\')">' + iconEdit() + ' 编辑</button>' +
+          '<button class="btn btn-default btn-sm" style="color:#ff4d4f;border-color:#ff4d4f" onclick="askDelete(\'product\',\'' + pid + '\',null,null)">' + iconDelete() + ' 删除</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-body">' +
+        '<div class="info-grid">' +
+          '<div class="info-item"><div class="info-label">唯一标识</div><div class="info-value"><code style="font-size:13px;background:#f5f5f5;padding:1px 6px;border-radius:3px">' + esc(p.id) + '</code></div></div>' +
+          '<div class="info-item"><div class="info-label">当前版本</div><div class="info-value">' + (p.version ? '<span class="version-badge">' + esc(p.version) + '</span>' : '<span style="color:rgba(0,0,0,.35)">—</span>') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">负责人</div><div class="info-value">' + esc(p.owner || '—') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">特性数</div><div class="info-value"><strong style="color:#1890ff">' + featCount + '</strong></div></div>' +
+          '<div class="info-item"><div class="info-label">功能数</div><div class="info-value"><strong style="color:#52c41a">' + funcCount + '</strong></div></div>' +
+          '<div class="info-item"><div class="info-label">关联需求</div><div class="info-value"><strong style="color:#fa8c16">' + reqs.length + '</strong></div></div>' +
+          '<div class="info-item full"><div class="info-label">描述</div><div class="info-value">' + esc(p.description || '—') + '</div></div>' +
+        '</div>' +
+        '<div class="tabs">' +
+          '<div class="tab-bar"><div class="tab-item active">关联需求</div></div>' +
+          '<div class="tab-content">' +
+            '<div class="table-wrap">' +
+              '<table>' +
+                '<thead><tr>' +
+                  '<th>ID</th><th>需求标题</th><th>客户</th><th>需求优先级</th><th>创建人</th><th>状态</th><th>得分</th>' +
+                '</tr></thead>' +
+                '<tbody>' + reqTableRows + '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderFeatureDetail(pid, fid) {
+  var p = findProduct(pid);
+  var f = findFeature(pid, fid);
+  if (!p || !f) return;
+  var panel = document.getElementById('rightPanel');
+
+  panel.innerHTML =
+    '<div class="detail-card">' +
+      '<div class="detail-header">' +
+        '<span class="detail-title">' + esc(f.name) + '</span>' +
+        featureStatusBadge(f.status) +
+        '<div class="detail-actions">' +
+          '<button class="btn btn-primary btn-sm" onclick="openFunctionModal(\'' + pid + '\',\'' + fid + '\',null)">+ 添加功能</button>' +
+          '<button class="btn btn-default btn-sm" onclick="openFeatureModal(\'' + pid + '\',\'' + fid + '\')">' + iconEdit() + ' 编辑</button>' +
+          '<button class="btn btn-default btn-sm" style="color:#ff4d4f;border-color:#ff4d4f" onclick="askDelete(\'feature\',\'' + pid + '\',\'' + fid + '\',null)">' + iconDelete() + ' 删除</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-body">' +
+        '<div class="info-grid">' +
+          '<div class="info-item"><div class="info-label">所属产品</div><div class="info-value">' + esc(p.name) + '</div></div>' +
+          '<div class="info-item"><div class="info-label">版本号</div><div class="info-value">' + (f.version ? '<span class="version-badge">' + esc(f.version) + '</span>' : '<span style="color:rgba(0,0,0,.35)">—</span>') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">负责人</div><div class="info-value">' + esc(f.owner || '—') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">状态</div><div class="info-value">' + featureStatusBadge(f.status) + '</div></div>' +
+          '<div class="info-item"><div class="info-label">功能数</div><div class="info-value"><strong style="color:#52c41a">' + (f.functions || []).length + '</strong></div></div>' +
+          '<div class="info-item full"><div class="info-label">描述</div><div class="info-value">' + esc(f.description || '—') + '</div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderFunctionDetail(pid, fid, fnid) {
+  var p = findProduct(pid);
+  var f = findFeature(pid, fid);
+  var fn = findFunction(pid, fid, fnid);
+  if (!p || !f || !fn) return;
+  var panel = document.getElementById('rightPanel');
+
+  panel.innerHTML =
+    '<div class="detail-card">' +
+      '<div class="detail-header">' +
+        '<span class="detail-title">' + esc(fn.name) + '</span>' +
+        functionStatusBadge(fn.status) +
+        '<div class="detail-actions">' +
+          '<button class="btn btn-default btn-sm" onclick="openFunctionModal(\'' + pid + '\',\'' + fid + '\',\'' + fnid + '\')">' + iconEdit() + ' 编辑</button>' +
+          '<button class="btn btn-default btn-sm" style="color:#ff4d4f;border-color:#ff4d4f" onclick="askDelete(\'function\',\'' + pid + '\',\'' + fid + '\',\'' + fnid + '\')">' + iconDelete() + ' 删除</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="detail-body">' +
+        '<div class="info-grid">' +
+          '<div class="info-item"><div class="info-label">所属产品</div><div class="info-value">' + esc(p.name) + '</div></div>' +
+          '<div class="info-item"><div class="info-label">所属特性</div><div class="info-value">' + esc(f.name) + '</div></div>' +
+          '<div class="info-item"><div class="info-label">版本号</div><div class="info-value">' + (fn.version ? '<span class="version-badge">' + esc(fn.version) + '</span>' : '<span style="color:rgba(0,0,0,.35)">—</span>') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">负责人</div><div class="info-value">' + esc(fn.owner || '—') + '</div></div>' +
+          '<div class="info-item"><div class="info-label">状态</div><div class="info-value">' + functionStatusBadge(fn.status) + '</div></div>' +
+          '<div class="info-item full"><div class="info-label">描述</div><div class="info-value">' + esc(fn.description || '—') + '</div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ============================================================
+// LINKED REQUIREMENTS
+// ============================================================
+function getLinkedRequirements(productId) {
+  var raw = localStorage.getItem(LS_REQ);
+  if (!raw) return [];
+  var reqs;
+  try { reqs = JSON.parse(raw); } catch(e) { return []; }
+  if (!Array.isArray(reqs)) return [];
+  var p = findProduct(productId);
+  if (!p) return [];
+  // match by product name or product ID stored in requirement
+  return reqs.filter(function(r) {
+    return r.product === p.name || r.product === p.id || r.productId === p.id;
+  });
+}
+
+// ============================================================
+// BADGES
+// ============================================================
+function featureStatusBadge(s) {
+  var map = { '规划中': 'badge-gray', '开发中': 'badge-blue', '已发布': 'badge-green' };
+  return '<span class="badge ' + (map[s] || 'badge-gray') + '">' + esc(s || '—') + '</span>';
+}
+function functionStatusBadge(s) {
+  var map = { '未开始': 'badge-gray', '开发中': 'badge-blue', '已完成': 'badge-green' };
+  return '<span class="badge ' + (map[s] || 'badge-gray') + '">' + esc(s || '—') + '</span>';
+}
+function priorityBadge(p) {
+  var map = { '紧急': 'badge-red', '最高': 'badge-red', '较高': 'badge-orange', '普通': 'badge-blue', '较低': 'badge-gray' };
+  return '<span class="badge ' + (map[p] || 'badge-gray') + '">' + esc(p || '—') + '</span>';
+}
+function statusBadge(s) {
+  var map = {
+    '待评审': 'badge-orange', '评审中': 'badge-blue', '待开发': 'badge-cyan',
+    '开发中': 'badge-blue', '已完成': 'badge-green', '已发布': 'badge-green',
+    '未通过': 'badge-red', '已取消': 'badge-gray'
+  };
+  return '<span class="badge ' + (map[s] || 'badge-gray') + '">' + esc(s || '—') + '</span>';
+}
+
+// ============================================================
+// PRODUCT MODAL
+// ============================================================
+function openProductModal(id) {
+  editingProductId = id;
+  document.getElementById('productModalTitle').textContent = id ? '编辑产品' : '新建产品';
+  document.getElementById('pNameErr').classList.remove('show');
+  document.getElementById('pName').classList.remove('error');
+  if (id) {
+    var p = findProduct(id);
+    if (!p) return;
+    document.getElementById('pName').value = p.name;
+    document.getElementById('pVersion').value = p.version || '';
+    document.getElementById('pOwner').value = p.owner || '';
+    document.getElementById('pDesc').value = p.description || '';
+  } else {
+    document.getElementById('pName').value = '';
+    document.getElementById('pVersion').value = '';
+    document.getElementById('pOwner').value = '';
+    document.getElementById('pDesc').value = '';
+  }
+  openModal('productOverlay');
+}
+
+function saveProduct() {
+  var name = document.getElementById('pName').value.trim();
+  if (!name) {
+    document.getElementById('pNameErr').classList.add('show');
+    document.getElementById('pName').classList.add('error');
+    return;
+  }
+  document.getElementById('pNameErr').classList.remove('show');
+  document.getElementById('pName').classList.remove('error');
+
+  var version = document.getElementById('pVersion').value.trim();
+  var owner   = document.getElementById('pOwner').value.trim();
+  var desc    = document.getElementById('pDesc').value.trim();
+
+  if (editingProductId) {
+    var p = findProduct(editingProductId);
+    if (p) {
+      p.name = name; p.version = version; p.owner = owner; p.description = desc;
+    }
+    showToast('产品已更新');
+  } else {
+    products.push({ id: nextProductId(), name: name, version: version, owner: owner, description: desc, features: [] });
+    showToast('产品已创建');
+  }
+  save();
+  closeModal('productOverlay');
+  render();
+}
+
+// ============================================================
+// FEATURE MODAL
+// ============================================================
+function openFeatureModal(pid, fid) {
+  editingFeatureCtx = { productId: pid, featureId: fid };
+  document.getElementById('featureModalTitle').textContent = fid ? '编辑特性' : '新建特性';
+  document.getElementById('fNameErr').classList.remove('show');
+  document.getElementById('fName').classList.remove('error');
+
+  var p = findProduct(pid);
+  document.getElementById('fProduct').value = p ? p.name : '';
+
+  if (fid) {
+    var f = findFeature(pid, fid);
+    if (!f) return;
+    document.getElementById('fName').value = f.name;
+    document.getElementById('fVersion').value = f.version || '';
+    document.getElementById('fOwner').value = f.owner || '';
+    document.getElementById('fStatus').value = f.status || '规划中';
+    document.getElementById('fDesc').value = f.description || '';
+  } else {
+    document.getElementById('fName').value = '';
+    document.getElementById('fVersion').value = p ? (p.version || '') : '';
+    document.getElementById('fOwner').value = '';
+    document.getElementById('fStatus').value = '规划中';
+    document.getElementById('fDesc').value = '';
+  }
+  openModal('featureOverlay');
+}
+
+function saveFeature() {
+  var name = document.getElementById('fName').value.trim();
+  if (!name) {
+    document.getElementById('fNameErr').classList.add('show');
+    document.getElementById('fName').classList.add('error');
+    return;
+  }
+  document.getElementById('fNameErr').classList.remove('show');
+  document.getElementById('fName').classList.remove('error');
+
+  var pid     = editingFeatureCtx.productId;
+  var fid     = editingFeatureCtx.featureId;
+  var version = document.getElementById('fVersion').value.trim();
+  var owner   = document.getElementById('fOwner').value.trim();
+  var status  = document.getElementById('fStatus').value;
+  var desc    = document.getElementById('fDesc').value.trim();
+
+  if (fid) {
+    var f = findFeature(pid, fid);
+    if (f) { f.name = name; f.version = version; f.owner = owner; f.status = status; f.description = desc; }
+    showToast('特性已更新');
+  } else {
+    var p = findProduct(pid);
+    if (p) {
+      if (!p.features) p.features = [];
+      p.features.push({ id: nextFeatureId(), name: name, version: version, owner: owner, status: status, description: desc, functions: [] });
+    }
+    showToast('特性已创建');
+  }
+  save();
+  closeModal('featureOverlay');
+  render();
+}
+
+// ============================================================
+// FUNCTION MODAL
+// ============================================================
+function openFunctionModal(pid, fid, fnid) {
+  editingFunctionCtx = { productId: pid, featureId: fid, funcId: fnid };
+  document.getElementById('functionModalTitle').textContent = fnid ? '编辑功能' : '新建功能';
+  document.getElementById('fnNameErr').classList.remove('show');
+  document.getElementById('fnName').classList.remove('error');
+
+  var p = findProduct(pid);
+  var f = findFeature(pid, fid);
+  document.getElementById('fnProduct').value = p ? p.name : '';
+  document.getElementById('fnFeature').value = f ? f.name : '';
+
+  if (fnid) {
+    var fn = findFunction(pid, fid, fnid);
+    if (!fn) return;
+    document.getElementById('fnName').value = fn.name;
+    document.getElementById('fnVersion').value = fn.version || '';
+    document.getElementById('fnOwner').value = fn.owner || '';
+    document.getElementById('fnStatus').value = fn.status || '未开始';
+    document.getElementById('fnDesc').value = fn.description || '';
+  } else {
+    document.getElementById('fnName').value = '';
+    document.getElementById('fnVersion').value = p ? (p.version || '') : '';
+    document.getElementById('fnOwner').value = '';
+    document.getElementById('fnStatus').value = '未开始';
+    document.getElementById('fnDesc').value = '';
+  }
+  openModal('functionOverlay');
+}
+
+function saveFunction() {
+  var name = document.getElementById('fnName').value.trim();
+  if (!name) {
+    document.getElementById('fnNameErr').classList.add('show');
+    document.getElementById('fnName').classList.add('error');
+    return;
+  }
+  document.getElementById('fnNameErr').classList.remove('show');
+  document.getElementById('fnName').classList.remove('error');
+
+  var pid     = editingFunctionCtx.productId;
+  var fid     = editingFunctionCtx.featureId;
+  var fnid    = editingFunctionCtx.funcId;
+  var version = document.getElementById('fnVersion').value.trim();
+  var owner   = document.getElementById('fnOwner').value.trim();
+  var status  = document.getElementById('fnStatus').value;
+  var desc    = document.getElementById('fnDesc').value.trim();
+
+  if (fnid) {
+    var fn = findFunction(pid, fid, fnid);
+    if (fn) { fn.name = name; fn.version = version; fn.owner = owner; fn.status = status; fn.description = desc; }
+    showToast('功能已更新');
+  } else {
+    var f = findFeature(pid, fid);
+    if (f) {
+      if (!f.functions) f.functions = [];
+      f.functions.push({ id: nextFunctionId(), name: name, version: version, owner: owner, status: status, description: desc });
+    }
+    showToast('功能已创建');
+  }
+  save();
+  closeModal('functionOverlay');
+  render();
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function askDelete(type, pid, fid, fnid) {
+  deletePending = { type: type, productId: pid, featureId: fid, funcId: fnid };
+  var name = '';
+  if (type === 'product') { var p = findProduct(pid); name = p ? p.name : pid; }
+  else if (type === 'feature') { var f = findFeature(pid, fid); name = f ? f.name : fid; }
+  else { var fn = findFunction(pid, fid, fnid); name = fn ? fn.name : fnid; }
+  document.getElementById('deleteMsg').textContent = '确定要删除 "' + name + '" 吗？删除后无法恢复。';
+  openModal('deleteOverlay');
+}
+
+function confirmDelete() {
+  if (!deletePending) return;
+  var d = deletePending;
+  if (d.type === 'product') {
+    products = products.filter(function(p) { return p.id !== d.productId; });
+    if (selectedNode && selectedNode.productId === d.productId) selectedNode = null;
+  } else if (d.type === 'feature') {
+    var p = findProduct(d.productId);
+    if (p) p.features = (p.features || []).filter(function(f) { return f.id !== d.featureId; });
+    if (selectedNode && selectedNode.featureId === d.featureId) selectedNode = null;
+  } else if (d.type === 'function') {
+    var f = findFeature(d.productId, d.featureId);
+    if (f) f.functions = (f.functions || []).filter(function(fn) { return fn.id !== d.funcId; });
+    if (selectedNode && selectedNode.funcId === d.funcId) selectedNode = null;
+  }
+  deletePending = null;
+  save();
+  closeModal('deleteOverlay');
+  render();
+  showToast('已删除');
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeModal(overlay.id);
+  });
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  var el = document.getElementById('toastEl');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+
+// ============================================================
+// ICONS (inline SVG)
+// ============================================================
+function iconBox() {
+  return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:#1890ff"><path d="M2 5l6-3 6 3v6l-6 3-6-3V5z" stroke="currentColor" stroke-width="1.2"/><path d="M2 5l6 3 6-3M8 8v5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+}
+function iconStar() {
+  return '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="color:#faad14"><path d="M8 2l1.75 3.55L14 6.27l-3 2.92.71 4.13L8 11.1l-3.71 2.22.71-4.13-3-2.92 4.25-.72L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+}
+function iconGear() {
+  return '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="color:#722ed1"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.54 11.54l1.41 1.41M3.05 12.95l1.42-1.42M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+}
+function iconEdit() {
+  return '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+}
+function iconDelete() {
+  return '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 5h10M6 5V3.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V5M5 5l.8 7.5a.5.5 0 00.5.5h3.4a.5.5 0 00.5-.5L11 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function iconPlus() {
+  return '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+}
+
+// ============================================================
+// ESCAPE
+// ============================================================
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+// BOOTSTRAP
+// ============================================================
+init();
+</script>
+</body>
+</html>
